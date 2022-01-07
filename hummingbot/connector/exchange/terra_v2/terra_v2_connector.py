@@ -78,7 +78,7 @@ class TerraConnector(ConnectorBase):
 
     @property
     def name(self):
-        return "terraswap"
+        return "terra_v2"
 
     @staticmethod
     async def fetch_trading_pairs() -> List[str]:
