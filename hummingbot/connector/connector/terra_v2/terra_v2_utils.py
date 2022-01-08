@@ -7,16 +7,16 @@ DEFAULT_FEES = [0., 0.]
 
 
 KEYS = {
-    "terra_wallet_address":
-        ConfigVar(key="terra_wallet_address",
+    "terra_v2_wallet_address":
+        ConfigVar(key="terra_v2_wallet_address",
                   prompt="Enter your Terra wallet address >>> ",
-                  required_if=lambda: "terra" in required_exchanges,
+                  required_if=lambda: "terra_v2" in required_exchanges,
                   is_secure=True,
                   is_connect_key=True),
-    "terra_wallet_seeds":
-        ConfigVar(key="terra_wallet_seeds",
+    "terra_v2_wallet_seeds":
+        ConfigVar(key="terra_v2_wallet_seeds",
                   prompt="Enter your Terra wallet seeds >>> ",
-                  required_if=lambda: "terra" in required_exchanges,
+                  required_if=lambda: "terra_v2" in required_exchanges,
                   is_secure=True,
                   is_connect_key=True),
 }
