@@ -38,7 +38,7 @@ s_decimal_NaN = Decimal("nan")
 logging.basicConfig(level=METRICS_LOG_LEVEL)
 
 
-class TerraConnector(ConnectorBase):
+class TerraV2Connector(ConnectorBase):
     """
     TerraInFlightOrder connects with terra gateway APIs and provides pricing, user account tracking and trading
     functionality.
@@ -54,8 +54,8 @@ class TerraConnector(ConnectorBase):
         return s_logger
 
     def __init__(self,
-                 terra_wallet_address: str,
-                 terra_wallet_seeds: str,
+                 terra_v2_wallet_address: str,
+                 terra_v2_wallet_seeds: str,
                  trading_pairs: List[str] = [],
                  trading_required: bool = True
                  ):
@@ -64,8 +64,8 @@ class TerraConnector(ConnectorBase):
         :param trading_required: Whether actual trading is needed.
         """
         super().__init__()
-        self._terra_wallet_address = terra_wallet_address
-        self._terra_wallet_seeds = terra_wallet_seeds
+        self._terra_wallet_address = terra_v2_wallet_address
+        self._terra_wallet_seeds = terra_v2_wallet_seeds
         self._trading_pairs = trading_pairs
         self._trading_required = trading_required
         self._ev_loop = asyncio.get_event_loop()

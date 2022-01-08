@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  hummingbot:
+    image: jspenc72/hummingbot:latest
+    build: .
+    volumes:
+      - ./hummingbot/connector/exchange/terra_v2:/home/hummingbot/hummingbot/connector/exchange/terra_v2/
