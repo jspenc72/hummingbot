@@ -1,0 +1,30 @@
+Pair
+Liquidity ↓
+24hr Volume
+Commission APR
+ANC-UST ... 156.49M UST ... 5.33M UST ... 5.61 %
+bLUNA-LUNA ... 150.85M UST ... 34.99M UST ... 18.79 %
+MINE-UST ... 44.72M UST ... 543.55K UST ... 4.57 %
+LUNA-UST ... 38.39M UST ... 18.83M UST ... 68.09 %
+MIR-UST ... 28.80M UST ... 615.32K UST ... 4.32 %
+mIAU-UST ... 17.82M UST ... 419.10K UST ... 2.52 %
+mQQQ-UST ... 17.55M UST ... 95.32K UST ... 1.88 %
+mAAPL-UST ... 15.73M UST ... 60.94K UST ... 2.76 %
+STT-UST ... 15.28M UST ... 524.56K UST ... 2.84 %
+mMSFT-UST ... 14.69M UST ... 62.65K UST ... 2.36 %
+mSLV-UST ... 13.86M UST ... 165.54K UST ... 4.08 %
+VKR-UST ... 13.36M UST ... 908.49K UST ... 9.50 %
+mGOOGL-UST ... 12.69M UST ... 254.21K UST ... 2.59 %
+mNFLX-UST ... 11.76M UST ... 85.07K UST ... 1.69 %
+mBABA-UST ... 11.73M UST ... 83.37K UST ... 3.48 %
+mAMZN-UST ... 11.31M UST ... 18.26K UST ... 1.75 %
+mUSO-UST ... 11.25M UST ... 44.35K UST ... 1.40 %
+mVIXY-UST ... 9.78M UST ... 207.26K UST ... 2.95 %
+mTSLA-UST ... 8.73M UST ... 120.57K UST ... 5.52 %
+nLuna-Psi ... 8.71M UST ... 565.48K UST ... 10.92 %
+Psi-UST ... 8.50M UST ... 1.42M UST ... 24.02 %
+
+mETH-UST ... 2.80M UST ... 2.92M UST ... 65.03 %
+mETH-bETH ... 2.79M UST ... 364.56K UST ... 10.26 %
+bETH-UST ... 7.16M UST ... 1.81M UST ... 34.40 %
+Psi-nETH ... 7.87M UST ... 341.50K UST ... 8.68 %
