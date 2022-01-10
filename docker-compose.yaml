@@ -14,11 +14,14 @@ services:
       - ./hummingbot_files/hummingbot_scripts:/scripts/
       
 
-#       docker run -it \
+# docker run -it \
 # --network host \
 # --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_conf,destination=/conf/" \
 # --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_logs,destination=/logs/" \
 # --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_data,destination=/data/" \
+# --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_certs,destination=/certs/" \
 # --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_scripts,destination=/scripts/" \
-# --mount "type=bind,source=$(pwd)/hummingbot/connector/exchange/terra_v2,destination=/home/hummingbot/hummingbot/connector/exchange/terra_v2" \
-# jspenc72/hummingbot:latest
+# --mount "type=bind,source=$(pwd)/hummingbot/strategy/limit_order,destination=/home/hummingbot/hummingbot/strategy/limit_order/" \
+# --mount "type=bind,source=$(pwd)/hummingbot/templates/,destination=/home/hummingbot/hummingbot/templates/" \
+# --mount "type=bind,source=$(pwd)/hummingbot/connector/connector/terra_v2,destination=/home/hummingbot/hummingbot/connector/connector/terra_v2/" \
+# coinalpha/hummingbot:latest
