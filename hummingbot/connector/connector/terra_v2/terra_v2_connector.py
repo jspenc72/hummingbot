@@ -129,6 +129,13 @@ class TerraV2Connector(ConnectorBase):
         """
         return await self.get_quote_price(trading_pair, is_buy, amount)
 
+    async def get_mid_price(self, trading_pair: str, is_buy: bool, amount: Decimal) -> Decimal:
+        """
+        This is simply the quote price
+        """
+        return await self.get_quote_price(trading_pair, is_buy, amount)
+
+
     def buy(self, trading_pair: str, amount: Decimal, order_type: OrderType, price: Decimal) -> str:
         """
         Buys an amount of base token for a given price (or cheaper).

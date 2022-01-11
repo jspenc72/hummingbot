@@ -50,3 +50,9 @@ class MarketTradingPairTuple(NamedTuple):
 
     def order_book_ask_entries(self) -> Iterator[ClientOrderBookRow]:
         return self.market.order_book_ask_entries(self.trading_pair)
+
+# Terra DEX's
+
+    def get_quote_price(self, is_buy: bool, volume: Decimal) -> Decimal:
+        return self.market.get_quote_price(self.trading_pair, is_buy, volume)
+
