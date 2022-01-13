@@ -4,7 +4,7 @@ from hummingbot.client.config.config_var import ConfigVar
 def market_prompt() -> str:
     connector = limit_order_config_map.get("connector").value
     return f'Enter the token trading pair on {connector} >>> '
-
+ 
 # List of parameters defined by the strategy
 limit_order_config_map ={
     "strategy":
@@ -12,6 +12,11 @@ limit_order_config_map ={
                   prompt="",
                   default="limit_order",
     ),
+    "limit-price":
+        ConfigVar(key="limit-price",
+                  prompt="Enter maximum you want to pay >>> ",
+                  prompt_on_new=True,
+    ),    
     "connector":
         ConfigVar(key="connector",
                   prompt="Enter the name of the exchange >>> ",
