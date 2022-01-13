@@ -56,7 +56,6 @@ class LimitOrder(StrategyPyBase):
             # self.logger().info(self._market_info)
             # The get_mid_price method gets the mid price of the coin and
             # stores it. This method is derived from the MarketTradingPairTuple class.
-            
 
             # mid_price = self._market_info.get_quote_price() 
             # self.logger().info("New Tick!")
