@@ -95,6 +95,7 @@ def main():
         "web3",
         "websockets",
         "yarl",
+        "terra_sdk"
     ]
 
     cython_kwargs = {
