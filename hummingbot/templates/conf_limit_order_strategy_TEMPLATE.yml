@@ -1,6 +1,14 @@
 template_version: 1
-strategy: null
-connector: null
-limit_price: null
-limit_percentage: null
-market: null
+strategy: limit_order
+connector: terraswap
+MAX_NUM_TRADE_ATTEMPTS: 2
+MINIMUM_WALLET_UST_BALANCE: 5
+TARGET_PAIR: NULL
+ORDER_TYPE: NULL
+BASE_LIMIT_PRICE: 80.00
+BASE_TX_CURRENCY: UST
+DEFAULT_BASE_TX_SIZE: 0.1
+DEFAULT_MAX_SPREAD: 0.005
+USE_MAX_TRANSACTION_SIZE: True
+EXPOSURE_PERCENTAGE: 0.8
+
