@@ -18,47 +18,47 @@ limit_order_config_map ={
                   prompt_on_new=True,
     ),  
     "MAX_NUM_TRADE_ATTEMPTS":
-        ConfigVar(key="connector", 
+        ConfigVar(key="MAX_NUM_TRADE_ATTEMPTS", 
                   prompt="Enter the value of MAX_NUM_TRADE_ATTEMPTS >>> ",
                   default="MAX_NUM_TRADE_ATTEMPTS"
     ),
     "MINIMUM_WALLET_UST_BALANCE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="MINIMUM_WALLET_UST_BALANCE", 
                   prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE >>> ",
                   default="MINIMUM_WALLET_UST_BALANCE"
     ),
     "ORDER_TYPE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="ORDER_TYPE", 
                   prompt="Enter the value of ORDER_TYPE >>> ",
                   default="ORDER_TYPE"
     ),
     "BASE_LIMIT_PRICE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="BASE_LIMIT_PRICE", 
                   prompt="Enter the value of BASE_LIMIT_PRICE >>> ",
                   default="BASE_LIMIT_PRICE"
     ),
     "BASE_TX_CURRENCY":
-        ConfigVar(key="connector", 
+        ConfigVar(key="BASE_TX_CURRENCY", 
                   prompt="Enter the value of BASE_TX_CURRENCY >>> ",
                   default="BASE_TX_CURRENCY"
     ),
     "DEFAULT_BASE_TX_SIZE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="DEFAULT_BASE_TX_SIZE", 
                   prompt="Enter the value of DEFAULT_BASE_TX_SIZE >>> ",
                   default="DEFAULT_BASE_TX_SIZE"
     ),
     "DEFAULT_MAX_SPREAD":
-        ConfigVar(key="connector", 
+        ConfigVar(key="DEFAULT_MAX_SPREAD", 
                   prompt="Enter the value of DEFAULT_MAX_SPREAD >>> ",
                   default="DEFAULT_MAX_SPREAD"
     ),
     "USE_MAX_TRANSACTION_SIZE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="USE_MAX_TRANSACTION_SIZE", 
                   prompt="Enter the value of USE_MAX_TRANSACTION_SIZE >>> ",
                   default="USE_MAX_TRANSACTION_SIZE"
     ),
     "EXPOSURE_PERCENTAGE":
-        ConfigVar(key="connector", 
+        ConfigVar(key="EXPOSURE_PERCENTAGE", 
                   prompt="Enter the value of EXPOSURE_PERCENTAGE >>> ",
                   default="EXPOSURE_PERCENTAGE"
     ),
