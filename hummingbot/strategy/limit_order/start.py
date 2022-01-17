@@ -12,7 +12,7 @@ from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_c
 def start(self):
     try:
         connector = c_map.get("connector").value.lower()
-        market = c_map.get("market").value
+        market = c_map.get("TARGET_PAIR").value
 
         self._initialize_markets([(connector, [market])])
         base, quote = market.split("-")
