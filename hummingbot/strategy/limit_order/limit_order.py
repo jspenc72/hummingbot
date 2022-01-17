@@ -7,6 +7,7 @@ import json
 import logging
 import asyncio
 import time
+import base64
 
 from terra_sdk.client.lcd import LCDClient
 from terra_sdk.key.mnemonic import MnemonicKey
@@ -122,6 +123,7 @@ class LimitOrder(StrategyPyBase):
                         
                         # swap = MsgSwap(self.mk.acc_address, rate, 'uusd')
                         swap = MsgSwap(self.mk.acc_address, '1000000'+self.offer_target, self.ask_target)
+                        self.logger().info(swap)
                         sequence = self.wallet.sequence()
                         tx = self.wallet.create_and_sign_tx(
                             msgs=[swap],
@@ -140,7 +142,7 @@ class LimitOrder(StrategyPyBase):
                         self.logger().info(balance)
                     # Handle if coin pair is token
                     if self.is_token_pair:
-                        pool = "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p" # uluna <> bLuna
+                        pool = "terra1j66jatn3k50hjtg2xemnjm8s7y8dws9xqa5y8w" # uluna <> bLuna
 
                         assets = self.terra.wasm.contract_query(pool, { "pool": {} })
                         self.logger().info("assets")
@@ -152,36 +154,48 @@ class LimitOrder(StrategyPyBase):
                         asset1Int = int(asset1)
 
                         beliefPrice = asset0Int / asset1Int
+                        beliefPriceStr = str(beliefPrice)
                         self.logger().info("beliefPrice")
                         self.logger().info(beliefPrice)
-
-                        execute = MsgExecuteContract(
-                            self.wallet.key.acc_address,
-                            pool, 
-                            {
-                                "swap": {
-                                    "max_spread": "0.01",
-                                    "offer_asset": {
-                                        "info": {
-                                            "native_token": {
-                                                "denom": "uluna",
+                        self.logger().info(beliefPriceStr)
+                        swp =  {
+                                    "swap": {
+                                        "max_spread": "0.005",
+                                        "offer_asset": {
+                                            "info": {
+                                                "native_token": {
+                                                    "denom": self.offer_target
+                                                }
                                             },
+                                            "amount": "49981"
                                         },
-                                        "amount": "24458",
-                                    },
-                                    "belief_price": beliefPrice,
-                                },
-                            },
-                            {"uluna": 24458},
+                                        "belief_price": beliefPriceStr
+                                    }
+                              }
+                        self.logger().info(swp)
+                        swap = MsgExecuteContract(
+                            sender=self.wallet.key.acc_address,
+                            contract=pool,
+                            execute_msg=swp,
+                            coins=Coins.from_str('49981uluna'),
                         )
-                        self.logger().info(execute)
 
+                        # execute = MsgExecuteContract(
+                        #     self.wallet.key.acc_address,
+                        #     pool, 
+                        #     base64_string
+                        # )
+                        # self.logger().info(execute)
                         tx = self.wallet.create_and_sign_tx(
-                            msgs=[execute], fee=StdFee(12458, Coins(uluna=24458))
+                            msgs=[swap], 
+                            fee=StdFee(1200000, "100000uusd"),  # gas, fees
+                            sequence = self.wallet.sequence()
                         )
                         self.logger().info(tx)
 
                         result = self.terra.tx.broadcast(tx)
+                        self.logger().info("token transaction log!")
+                        self.logger().info(result.raw_log)
                         self.logger().info("token transaction complete!")
                         self.logger().info(result.txhash)
                         balance = self.terra.bank.balance(self.mk.acc_address)
@@ -190,15 +204,12 @@ class LimitOrder(StrategyPyBase):
 
                     # print(terra.tendermint.node_info())
 
-                    # 
                     # mk.mnemonic()
-
 
                     # delegations = self.terra.staking.validators() 
                     # self.logger().info(delegations)
                     # ublunarate = terra.oracle.exchange_rate('ubluna')
                     # self.logger().info(ublunarate)
-
 
                     # self.logger().info(quote_pice)
                     # market = self.active_markets[0]
@@ -212,7 +223,6 @@ class LimitOrder(StrategyPyBase):
                     # mid_price = self._market_info.get_quote_price() 
                     # self.logger().info("New Tick!")
                     # self.logger().info(mid_price)
-
 
                     # The buy_with_specific_market method executes the trade for you. This     
                     # method is derived from the Strategy_base class. 
