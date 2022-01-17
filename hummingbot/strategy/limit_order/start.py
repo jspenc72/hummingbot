@@ -13,12 +13,33 @@ def start(self):
     try:
         connector = c_map.get("connector").value.lower()
         market = c_map.get("TARGET_PAIR").value
+        # Get Config Values
+        MAX_NUM_TRADE_ATTEMPTS = c_map.get("MAX_NUM_TRADE_ATTEMPTS").value
+        MINIMUM_WALLET_UST_BALANCE = c_map.get("MINIMUM_WALLET_UST_BALANCE").value
+        ORDER_TYPE = c_map.get("ORDER_TYPE").value
+        BASE_LIMIT_PRICE = c_map.get("BASE_LIMIT_PRICE").value
+        BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
+        DEFAULT_BASE_TX_SIZE = c_map.get("DEFAULT_BASE_TX_SIZE").value
+        DEFAULT_MAX_SPREAD = c_map.get("DEFAULT_MAX_SPREAD").value
+        USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
+        EXPOSURE_PERCENTAGE = c_map.get("EXPOSURE_PERCENTAGE").value        
+        
+        print("Running limit_order with config: ")        
+        print("MAX_NUM_TRADE_ATTEMPTS: " + MAX_NUM_TRADE_ATTEMPTS)
+        print("MINIMUM_WALLET_UST_BALANCE: " + MINIMUM_WALLET_UST_BALANCE)
+        print("ORDER_TYPE: " + ORDER_TYPE)
+        print("BASE_LIMIT_PRICE: " + BASE_LIMIT_PRICE)
+        print("BASE_TX_CURRENCY: " + BASE_TX_CURRENCY)
+        print("DEFAULT_BASE_TX_SIZE: " + DEFAULT_BASE_TX_SIZE)
+        print("DEFAULT_MAX_SPREAD: " + DEFAULT_MAX_SPREAD)
+        print("USE_MAX_TRANSACTION_SIZE: " + USE_MAX_TRANSACTION_SIZE)
+        print("EXPOSURE_PERCENTAGE: " + EXPOSURE_PERCENTAGE)
 
         self._initialize_markets([(connector, [market])])
         base, quote = market.split("-")
         market_info = MarketTradingPairTuple(self.markets[connector], market, base, quote)
         self.market_trading_pair_tuples = [market_info]
-        terra = LCDClient(chain_id="columbus-4", url="https://lcd.terra.dev")
+        terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
         # Opening JSON file
         cwd = os.getcwd() 
         cw20_path = cwd+'/hummingbot/strategy/limit_order/cw20.json'
@@ -38,6 +59,7 @@ def start(self):
         ibc_data = json.load(fibc)
         cw20pairs = json.load(fcw20pairs)
         coin_to_denom = json.load(fcoin_to_denom)
+        print(base + " - " + quote)
 
         # Find offer target denom
         token_target = ''

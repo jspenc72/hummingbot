@@ -11,56 +11,62 @@ limit_order_config_map ={
         ConfigVar(key="strategy",
                   prompt="",
                   default="limit_order",
-    ), 
+    ),
     "connector":
         ConfigVar(key="connector",
                   prompt="Enter the name of the exchange >>> ",
                   prompt_on_new=True,
-    ),  
+    ),
     "MAX_NUM_TRADE_ATTEMPTS":
         ConfigVar(key="MAX_NUM_TRADE_ATTEMPTS", 
                   prompt="Enter the value of MAX_NUM_TRADE_ATTEMPTS >>> ",
-                  default="MAX_NUM_TRADE_ATTEMPTS"
+                  default="2",
+                  prompt_on_new=True,
     ),
     "MINIMUM_WALLET_UST_BALANCE":
         ConfigVar(key="MINIMUM_WALLET_UST_BALANCE", 
                   prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE >>> ",
-                  default="MINIMUM_WALLET_UST_BALANCE"
+                  default="5"
     ),
     "ORDER_TYPE":
         ConfigVar(key="ORDER_TYPE", 
-                  prompt="Enter the value of ORDER_TYPE >>> ",
-                  default="ORDER_TYPE"
+                  prompt="Enter the value of ORDER_TYPE (BUY | SELL)>>> ",
+                  default="BUY",
+                  prompt_on_new=True,
     ),
     "BASE_LIMIT_PRICE":
         ConfigVar(key="BASE_LIMIT_PRICE", 
                   prompt="Enter the value of BASE_LIMIT_PRICE >>> ",
-                  default="BASE_LIMIT_PRICE"
+                  prompt_on_new=True,
     ),
     "BASE_TX_CURRENCY":
         ConfigVar(key="BASE_TX_CURRENCY", 
                   prompt="Enter the value of BASE_TX_CURRENCY >>> ",
-                  default="BASE_TX_CURRENCY"
+                  default="80.00",
+                  prompt_on_new=True,
     ),
     "DEFAULT_BASE_TX_SIZE":
         ConfigVar(key="DEFAULT_BASE_TX_SIZE", 
                   prompt="Enter the value of DEFAULT_BASE_TX_SIZE >>> ",
-                  default="DEFAULT_BASE_TX_SIZE"
+                  default="0.1",
+                  prompt_on_new=True,
     ),
     "DEFAULT_MAX_SPREAD":
         ConfigVar(key="DEFAULT_MAX_SPREAD", 
                   prompt="Enter the value of DEFAULT_MAX_SPREAD >>> ",
-                  default="DEFAULT_MAX_SPREAD"
+                  default="0.005"
     ),
     "USE_MAX_TRANSACTION_SIZE":
         ConfigVar(key="USE_MAX_TRANSACTION_SIZE", 
                   prompt="Enter the value of USE_MAX_TRANSACTION_SIZE >>> ",
-                  default="USE_MAX_TRANSACTION_SIZE"
+                  default="True",
+                  prompt_on_new=True,
     ),
     "EXPOSURE_PERCENTAGE":
         ConfigVar(key="EXPOSURE_PERCENTAGE", 
-                  prompt="Enter the value of EXPOSURE_PERCENTAGE >>> ",
-                  default="EXPOSURE_PERCENTAGE"
+                  prompt="Enter the value of EXPOSURE_PERCENTAGE (0.80) >>> ",
+                  default="0.80",
+                  prompt_on_new=True,
     ),
     "TARGET_PAIR": ConfigVar(
         key="TARGET_PAIR",
