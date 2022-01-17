@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+echo ${SECRET_TERRA_MNEMONIC}
 
 docker run --env SECRET_TERRA_MNEMONIC -it \
 --network host \
