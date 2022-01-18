@@ -82,9 +82,9 @@ class TerraswapConnector(ConnectorBase):
 
     @staticmethod
     async def fetch_trading_pairs() -> List[str]:
-        return ["LUNA-UST", "LUNA-KRT", "LUNA-SDT", "LUNA-MNT",
-                "UST-KRT", "UST-SDT", "UST-MNT",
-                "KRT-SDT", "KRT-MNT", "SDT-MNT"]
+        return ["Luna-UST", "Luna-bLuna","UST-ANC","UST-bETH","UST-MINE","UST-LUNI","Luna-LunaX","UST-mSLV","UST-Psi","UST-mMSFT","UST-KUJI","nLuna-Psi","UST-mGOOGL","UST-mQQQ","Psi-nETH","UST-mSBUX","UST-mAMZN","UST-mNFLX","UST-mNIO","UST-mPYPL","UST-mKO","UST-WHALE","UST-mAAPL","UST-mIAU","UST-mNVDA","UST-mTSLA","UST-mFB","UST-mVIXY","UST-MIR","UST-mETH",
+                "UST-TWShiba","mETH-bETH","UST-mUSO","Psi-bPsiDP-24m","UST-SPEC","UST-mSPY","UST-mJNJ","UST-STT","UST-TLAND","UST-mBABA",
+                "LUNA-UST", "LUNA-KRT", "LUNA-SDT", "LUNA-MNT","UST-KRT", "UST-SDT", "UST-MNT","KRT-SDT", "KRT-MNT", "SDT-MNT"]
 
     @property
     def limit_orders(self) -> List[LimitOrder]:

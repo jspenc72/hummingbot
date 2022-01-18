@@ -36,7 +36,8 @@ limit_order_config_map ={
     ),
     "BASE_LIMIT_PRICE":
         ConfigVar(key="BASE_LIMIT_PRICE", 
-                  prompt="Enter the value of BASE_LIMIT_PRICE >>> ",
+                  prompt="Enter the value of BASE_LIMIT_PRICE (70000000uluna) would be entered as 70000000 >>> ",
+                  default="70000000",
                   prompt_on_new=True,
     ),
     "BASE_TX_CURRENCY":
