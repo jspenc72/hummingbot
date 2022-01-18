@@ -1,5 +1,7 @@
 from terra_sdk.core import Coin, Coins
 import requests
+import json
+import os 
 
 class LimitOrderUtils():
     # We use StrategyPyBase to inherit the structure. We also 
@@ -17,10 +19,10 @@ class LimitOrderUtils():
     # MINIMUM_WALLET_UST_BALANCE
     def balance_above_min_threshold(self, balance, currency, threshold):
         print("balance_above_min_threshold", balance, currency, threshold)
-        if balance[currency]:
+        if balance.get(currency) is not None:
             coinbal = balance[currency]
             print(coinbal.amount, "?", threshold)
-            return coinbal.amount > int(threshold)
+            return coinbal.amount > int(threshold)            
         else:
             return False
 
@@ -32,7 +34,7 @@ class LimitOrderUtils():
     # DEFAULT_BASE_TX_SIZE
     def get_base_tx_size_from_balance(self, balance, currency, DEFAULT_BASE_TX_SIZE):
         print("get_base_tx_size_from_balance", balance, currency, DEFAULT_BASE_TX_SIZE)
-        if balance[currency]:    
+        if balance.get(currency) is not None:
             amount = balance[currency].amount
             size = amount*float(DEFAULT_BASE_TX_SIZE)
         else:
@@ -41,13 +43,26 @@ class LimitOrderUtils():
         return int(size)
 
     # BASE_TX_CURRENCY
-    def get_limit_order_offset(self, currency, BASE_LIMIT_PRICE, EXPOSURE_PERCENTAGE):
+    def get_coin_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
         rate = self.terra.oracle.exchange_rates()[currency]
         print(rate)
-        print("get_limit_order_offset", rate, BASE_LIMIT_PRICE, EXPOSURE_PERCENTAGE)
+        print("get_limit_order_offset", rate, BASE_LIMIT_PRICE)
         offsetpercent = rate.amount / int(BASE_LIMIT_PRICE)
-        withinthreshold = offsetpercent <= float(EXPOSURE_PERCENTAGE)
+        withinthreshold = False
         return offsetpercent, withinthreshold
+
+    def coin_to_denom(self, coin):
+        target = ''
+        cwd = os.getcwd()
+        coin_to_denom = json.load(open(cwd+'/hummingbot/strategy/limit_order/coin_to_denom.json'))
+
+        for attribute, value in coin_to_denom.items():
+            # print(attribute, value) # example usage       
+            if coin == attribute:                           # Get coin denomination from Trading Pair name
+                print("found: "+attribute, 'with symbol '+ value)
+                target = value
+        return target
+
 
     def get_txs_for_pair(self, pair):
         # Luna-USST
@@ -57,6 +72,35 @@ class LimitOrderUtils():
     def get_tokens(self):
         # Luna-USST
         # https://api.terraswap.io/tokens
-        tokens = requests.get('https://assets.terra.money/ibc/tokens.json').json()
+        tokens = requests.get('https://api.terraswap.io/tokens').json()
         print("get_tokens")
         return tokens
+
+    def get_pair_txs(self, pair):
+        tokens = requests.get('https://api.terraswap.io/tokens').json()
+        print("get_tokens")
+        return tokens        
+
+    def find_token_pair_contract_from_tokens(self, tokens, contract_addr):
+        target_pair = []
+        print("find_token_pair_contract_from_tokens")
+        print(contract_addr)   
+        for s in range(len(tokens)):
+            token = tokens[s]
+            if 'contract_addr' in token:
+                if token['contract_addr'] == contract_addr:
+                    target_token = token
+        return target_pair
+
+    def find_token_pair_contract_from_pairs(self, pairs, market):
+        target_pair = []
+        print("find_token_pair_contract_from_pairs")
+        print(market)
+        print(len(pairs))
+        for s in range(len(pairs)):
+            pair = pairs[s]
+            if 'pairAddress' in pair:
+                if 'pairAlias' in pair:
+                    if pair["pairAlias"] == market:
+                        target_pair = pair
+        return target_pair

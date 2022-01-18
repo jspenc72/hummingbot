@@ -6,11 +6,8 @@ import json
 import os 
 import time
 import sys
-
-
 from terra_sdk.key.mnemonic import MnemonicKey
-
-
+from hummingbot.strategy.limit_order import LimitOrderUtils
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.strategy.limit_order import LimitOrder
 from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_config_map as c_map
@@ -18,6 +15,7 @@ from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_c
 def start(self):
     try:
         self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
+        self.utils = LimitOrderUtils(self.terra)
         SECRET_TERRA_MNEMONIC = os.getenv('SECRET_TERRA_MNEMONIC')
         if os.getenv("SECRET_TERRA_MNEMONIC") is not None:
             self.mk = MnemonicKey(mnemonic=SECRET_TERRA_MNEMONIC)
@@ -35,10 +33,9 @@ def start(self):
         ORDER_TYPE = c_map.get("ORDER_TYPE").value
         BASE_LIMIT_PRICE = c_map.get("BASE_LIMIT_PRICE").value
         BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
-        DEFAULT_BASE_TX_SIZE = c_map.get("DEFAULT_BASE_TX_SIZE").value
+        DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL = c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value
         DEFAULT_MAX_SPREAD = c_map.get("DEFAULT_MAX_SPREAD").value
         USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
-        EXPOSURE_PERCENTAGE = c_map.get("EXPOSURE_PERCENTAGE").value        
         
         print("Running limit_order with config: ")        
         print("MAX_NUM_TRADE_ATTEMPTS: " + MAX_NUM_TRADE_ATTEMPTS)
@@ -46,10 +43,9 @@ def start(self):
         print("ORDER_TYPE: " + ORDER_TYPE)
         print("BASE_LIMIT_PRICE: " + BASE_LIMIT_PRICE)
         print("BASE_TX_CURRENCY: " + BASE_TX_CURRENCY)
-        print("DEFAULT_BASE_TX_SIZE: " + DEFAULT_BASE_TX_SIZE)
+        print("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL: " + DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL)
         print("DEFAULT_MAX_SPREAD: " + DEFAULT_MAX_SPREAD)
         print("USE_MAX_TRANSACTION_SIZE: " + USE_MAX_TRANSACTION_SIZE)
-        print("EXPOSURE_PERCENTAGE: " + EXPOSURE_PERCENTAGE)
 
         self._initialize_markets([(connector, [market])])
         base, quote = market.split("-")
@@ -67,60 +63,49 @@ def start(self):
         fibc = open(ibc_path)
         fcw20pairs = open(fcw20pairs_path)
         fcoin_to_denom = open(coin_to_denom_path)
-        terra_swap_coins = ["Luna","UST","AUT","CAT","CHT","CNT","DKT","EUT","GBT","HKT","IDT","INT","JPT","KRT","MNT","PHT","SDT","SET","SGT","THT"]
-        terra_swap_tokens = ["SCRT","ANC","bLuna","MIR","mAAPL","mABNB","mAMC","mAMD","mAMZN","mBABA","mBTC","mCOIN","mDOT","mETH","mFB","mGLXY","mGME","mGOOGL","mGS","mIAU","mMSFT","mNFLX","mQQQ","mSLV","mSPY","mSQ","mTSLA","mTWTR","mUSO","mVIXY","MINE","bPsiDP-24m","Psi","LOTA","SPEC","STT","TWD","MIAW","VKR","ORION","KUJI","wewstETH","wsstSOL","LunaX","ORNE","TLAND","LUNI","PLY","ASTRO","XRUNE","SITY"]
+        # terra_swap_coins = ["Luna","UST","AUT","CAT","CHT","CNT","DKT","EUT","GBT","HKT","IDT","INT","JPT","KRT","MNT","PHT","SDT","SET","SGT","THT"]
+        # terra_swap_tokens = ["SCRT","ANC","bLuna","MIR","mAAPL","mABNB","mAMC","mAMD","mAMZN","mBABA","mBTC","mCOIN","mDOT","mETH","mFB","mGLXY","mGME","mGOOGL","mGS","mIAU","mMSFT","mNFLX","mQQQ","mSLV","mSPY","mSQ","mTSLA","mTWTR","mUSO","mVIXY","MINE","bPsiDP-24m","Psi","LOTA","SPEC","STT","TWD","MIAW","VKR","ORION","KUJI","wewstETH","wsstSOL","LunaX","ORNE","TLAND","LUNI","PLY","ASTRO","XRUNE","SITY"]
 
         # returns JSON object as
         # a dictionary
-        cw20_data = json.load(fcw20)
+        # cw20_data = json.load(fcw20)
+        cw20_tokens = requests.get('https://api.terraswap.io/tokens').json()
+        cw20_pairs = requests.get('https://api.terraswap.io/dashboard/pairs').json()
         ibc_data = json.load(fibc)
         cw20pairs = json.load(fcw20pairs)
         coin_to_denom = json.load(fcoin_to_denom)
         print(base + " - " + quote)
 
         # Find offer target denom
+        pair = []
         token_target = ''
         offer_target = ''
         ask_target = ''
-        for attribute, value in coin_to_denom.items():
-            # print(attribute, value) # example usage       
-            if base == attribute:                           # Get coin denomination from Trading Pair name
-                print("found: "+attribute, 'with symbol '+ value)
-                offer_target = value
-        # Find ask target denom
-        for attribute, value in coin_to_denom.items():
-            if quote == attribute:                           # Get coin denomination from Trading Pair name
-                print("found: "+attribute, 'with symbol '+ value)
-                ask_target = value
-
-        if offer_target != '' and ask_target != '':
-            print("found trading pair: ", offer_target, ask_target)
-# COIN-COIN
-        else:
-            print("base trading pair "+market+". "+ base +"-"+ quote +" not found searching for matching Terra ERC20 tokens")
-            
-            if ask_target == '':
-# COIN-SOME_possible_TOKEN
-                # Find target token
-                for attribute, value in cw20_data['mainnet'].items():
-                    if quote == value['symbol']:
-                        # is candidate, need to search
-                        # print(attribute, value) # example usage
-                        print("found: " + quote, "with token address: "+attribute)
-                        token_target = attribute
-                        ask_target = token_target
-            elif offer_target == '':
-# SOME_possible_TOKEN-Luna
-                print("market is "+market+" token to coin, only option is token to Luna!")
-            else: 
-                print("unknown trade type, cannot find matching pair")
+        print(" trading pair "+market+". "+ base +"-"+ quote +"  searching for matching Terra ERC20 tokens by pairAlias")
+        # go through pairs
+        pair = self.utils.find_token_pair_contract_from_pairs(cw20_pairs, market)
+        print(pair)
+        if 'pairAddress' in pair:
+            print("token pair lookup successful")
+            token_target = pair['pairAddress']
+            offer_target = pair['token0']
+            ask_target = pair['token1']
+            # TOKEN-PAIR
+            self.strategy = LimitOrder(market_info,terra_client=terra,offer_target=offer_target,ask_target=ask_target,token_target=token_target,token_pair=pair)
+        else: 
+            # SOMETHING-Luna
+            print("market is "+market+" token to coin, only option is token to Luna!")
+            print("unknown trade type, cannot find matching pair")
+            offer_target = self.utils.coin_to_denom(base)
+            ask_target = self.utils.coin_to_denom(quote)
+            # Find ask target denom
+            if offer_target != '' and ask_target != '':
+                print("found trading pair: ", offer_target, ask_target)
+                self.strategy = LimitOrder(market_info,terra_client=terra,offer_target=offer_target,ask_target=ask_target,token_target=token_target,token_pair=pair)
+            else:
+                # COIN-COIN
+                print('unable to find trading pair')
         print("final trading pair: ", offer_target +" > " + ask_target)
-
-        self.strategy = LimitOrder(market_info,
-                                    terra_client=terra,
-                                    offer_target= offer_target,
-                                    ask_target=ask_target,
-                                    token_target=token_target)
 
     except Exception as e:
         self._notify(str(e))
