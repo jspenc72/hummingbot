@@ -41,14 +41,14 @@ limit_order_config_map ={
     ),
     "BASE_TX_CURRENCY":
         ConfigVar(key="BASE_TX_CURRENCY", 
-                  prompt="Enter the value of BASE_TX_CURRENCY >>> ",
-                  default="80.00",
+                  prompt="Enter the value of BASE_TX_CURRENCY (UST | Luna | bLuna)>>> ",
+                  default="UST",
                   prompt_on_new=True,
     ),
     "DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL":
-        ConfigVar(key="DEFAULT_BASE_TX_SIZE", 
-                  prompt="Enter the value of DEFAULT_BASE_TX_SIZE >>> ",
-                  default="0.1",
+        ConfigVar(key="DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL", 
+                  prompt="Enter the value of DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL (0.8 * walletbalance)>>> ",
+                  default="0.8",
                   prompt_on_new=True,
     ),
     "DEFAULT_MAX_SPREAD":

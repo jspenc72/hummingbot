@@ -97,7 +97,7 @@ class LimitOrder(StrategyPyBase):
         
         # Check run conditions
         balance = self.terra.bank.balance(self.mk.acc_address)
-        condition1 = self.utils.balance_above_min_threshold(balance, self.offer_target, MINIMUM_WALLET_UST_BALANCE)
+        condition1 = self.utils.balance_above_min_threshold(balance, self.utils.coin_to_denom(BASE_TX_CURRENCY), MINIMUM_WALLET_UST_BALANCE)
         print("balance_above_min_threshold PASS: ", condition1)
         # condition2 = self.utils.check_base_currency(self.offer_target, BASE_TX_CURRENCY)
         # print("check_base_currency PASS: ", condition2)
@@ -114,35 +114,41 @@ class LimitOrder(StrategyPyBase):
                 return
             else:
                 self.logger().warning(f"{self._market_info.market.name} is ready. Trading started")
+                self.logger().info("{timestamp} Evaluate Limit Order: "+ self.ask_target +" > "+ self.offer_target + " token: "+ self.token_target)
                 denoms = self.terra.oracle.active_denoms()
                 rates = self.terra.oracle.exchange_rates()
+                balance = self.terra.bank.balance(self.mk.acc_address)
+                tx_size = self.utils.get_base_tx_size_from_balance(balance, self.utils.coin_to_denom(c_map.get("BASE_TX_CURRENCY").value), c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)
+
+                if tx_size == 0:
+                    self.logger().warning(f"computed transaction size is 0, check wallet balance", balance)
+                    return 
+
+                if self.token_target == '':
+                    self.is_coin_pair = True
+                    # Evaluate Trade
+                    offset, trade = self.evaluate_coin_pair_offset(tx_size)
+                    if trade == False:
+                        print("Current Limit Offset: ", offset)
+                        return
+
+                elif self.token_target != '':    
+                    self.is_token_pair = True
+                    offset, trade = self.evaluate_token_pair_offset()
+                    if trade == False:
+                        print("Current Limit Offset: ", offset)
+                        return                    
 
                 if not self._order_completed or not self._order_attempted:
-                    if self.check_run_params():
-                            
+                    if self.check_run_params():                            
                         self._order_attempted = True
-                        self.logger().info("Retrieving Terra Wallet Balance")
-                        balance = self.terra.bank.balance(self.mk.acc_address)
-                        self.logger().info("Using Wallet:")
-                        self.logger().info(self.mk.acc_address)
-                        self.logger().info(balance)                       
-                        self.logger().info("New Tick! Limit Order: "+ self.ask_target +" > "+ self.offer_target + " token: "+ self.token_target)
-                        tx_size = self.utils.get_base_tx_size_from_balance(balance, self.offer_target, c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)
-                        print(tx_size)
-                        if self.token_target == '':
-                            self.is_coin_pair = True
-                        elif self.token_target != '':    
-                            self.is_token_pair = True
                         # Handle if coin pair is coin
                         if self.is_coin_pair:
-                            int_coin = Coin(self.offer_target, tx_size)
-                            rate = self.terra.market.swap_rate(int_coin, self.ask_target)
-                            self.logger().info("Limit Order: Simulating Swap before trade")
-                            self.logger().info("swap: "+str(tx_size) + self.offer_target +" > "+ self.ask_target)
-                            self.logger().info("current rate: ")
-                            self.logger().info(rate)
-                            offset, trade = self.utils.get_limit_order_offset(rate, c_map.get("BASE_LIMIT_PRICE").value)
-                            print(offset, trade)
+                            offset, trade  = self.evaluate_coin_pair_offset(tx_size)
+                            
+                            if trade == False:
+                                print("Limit Offset: ", offset)
+                                return
 
                             # swap = MsgSwap(self.mk.acc_address, rate, 'uusd')
                             swap = MsgSwap(self.mk.acc_address, str(tx_size)+''+self.offer_target, self.ask_target)
@@ -166,8 +172,8 @@ class LimitOrder(StrategyPyBase):
                             balance = self.terra.bank.balance(self.mk.acc_address)
                             self.logger().info(balance)
                         # Handle if coin pair is token
-                        print("now handle token")
                         if self.is_token_pair:
+                            print("handle token")
                             pool = "terra1j66jatn3k50hjtg2xemnjm8s7y8dws9xqa5y8w" # uluna <> bLuna
                             # Find contract id
                             pool = self.token_target
@@ -188,7 +194,7 @@ class LimitOrder(StrategyPyBase):
                             self.logger().info(beliefPriceStr)
                             tx_size = self.utils.get_base_tx_size_from_balance(balance, self.offer_target, c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)
 
-                            swp =  {
+                            swp = {
                                         "swap": {
                                             "max_spread": "0.005",
                                             "offer_asset": {
@@ -208,7 +214,7 @@ class LimitOrder(StrategyPyBase):
                                 sender=self.wallet.key.acc_address,
                                 contract=pool,
                                 execute_msg=swp,
-                                coins=Coins.from_str(tx_size+''+self.offer_target),
+                                coins=Coins.from_str(str(tx_size)+''+self.offer_target),
                             )
 
                             tx = self.wallet.create_and_sign_tx(
@@ -230,6 +236,36 @@ class LimitOrder(StrategyPyBase):
                             self._orders_completed_count = self._orders_completed_count+1
 
                         self._order_attempted = True
+
+    def evaluate_token_pair_offset(self):
+        pricing = self.utils.get_pair_pricing(self.token_target)        
+        if c_map.get("ORDER_TYPE").value == "BUY":
+            offset, trade = self.utils.get_token_buy_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
+            print("Buy: ", offset, trade)
+        else:
+            offset, trade = self.utils.get_token_sell_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
+            print("Sell: ", offset, trade)
+        return offset, trade
+
+
+    def evaluate_coin_pair_offset(self, tx_size):
+        int_coin = Coin(self.offer_target, tx_size)
+        rate = self.terra.market.swap_rate(int_coin, self.ask_target)
+        self.logger().info("Limit Order: Simulating Swap before trade")
+        self.logger().info("swap: "+str(tx_size) + self.offer_target +" > "+ self.ask_target)
+        self.logger().info("current rate: ")
+        self.logger().info(rate)
+
+        if c_map.get("ORDER_TYPE").value == "BUY":
+            offset, trade = self.utils.get_coin_buy_limit_order_offset(rate, c_map.get("BASE_LIMIT_PRICE").value)
+        else:
+            offset, trade = self.utils.get_coin_sell_limit_order_offset(rate, c_map.get("BASE_LIMIT_PRICE").value)
+        
+        if trade == False:
+            print("Limit Offset: ", offset)
+        
+        return offset, trade  
+
 
     # Emit a log message when the order completes
     def did_complete_buy_order(self, order_completed_event):

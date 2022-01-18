@@ -1,3 +1,4 @@
+import string
 from terra_sdk.core import Coin, Coins
 import requests
 import json
@@ -39,17 +40,44 @@ class LimitOrderUtils():
             size = amount*float(DEFAULT_BASE_TX_SIZE)
         else:
             size = 0
-
         return int(size)
 
     # BASE_TX_CURRENCY
-    def get_coin_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
-        rate = self.terra.oracle.exchange_rates()[currency]
-        print(rate)
-        print("get_limit_order_offset", rate, BASE_LIMIT_PRICE)
-        offsetpercent = rate.amount / int(BASE_LIMIT_PRICE)
-        withinthreshold = False
-        return offsetpercent, withinthreshold
+    def get_token_buy_limit_order_offset(self, pricing, BASE_LIMIT_PRICE):
+        price = (float(pricing['token0']['price'])*10**6)
+        offset = price-int(BASE_LIMIT_PRICE)
+        withinthreshold = offset <= 0 if True else False
+        return offset, withinthreshold
+
+    def get_token_sell_limit_order_offset(self, pricing, BASE_LIMIT_PRICE):
+        offset = (float(pricing['token0']['price'])*10**6)-int(BASE_LIMIT_PRICE)
+        withinthreshold = offset >= 0 if True else False
+        return offset, withinthreshold        
+
+    def get_coin_buy_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
+        print("get_coin_buy_limit_order_offset", self.terra.oracle.exchange_rates(), currency, BASE_LIMIT_PRICE)
+        if self.terra.oracle.exchange_rates().get(currency) is not None:
+            rate = self.terra.oracle.exchange_rates()[currency]
+            print(rate)
+            offset = rate.amount - int(BASE_LIMIT_PRICE)
+            withinthreshold = offset <= 0 if True else False
+        else: 
+            offset = 0
+            withinthreshold = False
+        return offset, withinthreshold
+
+    def get_coin_sell_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
+        if self.terra.oracle.exchange_rates().get(currency) is not None:
+            rate = self.terra.oracle.exchange_rates()[currency]
+            print(rate)
+            print("get_limit_order_offset", rate, BASE_LIMIT_PRICE)
+            offset = rate.amount - int(BASE_LIMIT_PRICE)
+            withinthreshold = offset >= 0 if True else False
+        else: 
+            offset = 0
+            withinthreshold = False
+        return offset, withinthreshold
+
 
     def coin_to_denom(self, coin):
         target = ''
@@ -64,22 +92,23 @@ class LimitOrderUtils():
         return target
 
 
-    def get_txs_for_pair(self, pair):
-        # Luna-USST
-        # https://api.terraswap.io/dashboard/txs?page=1&pair=terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6
-        print("get_txs_for_pair")
 
     def get_tokens(self):
         # Luna-USST
         # https://api.terraswap.io/tokens
         tokens = requests.get('https://api.terraswap.io/tokens').json()
-        print("get_tokens")
+        # print("get_tokens")
         return tokens
 
-    def get_pair_txs(self, pair):
-        tokens = requests.get('https://api.terraswap.io/tokens').json()
-        print("get_tokens")
-        return tokens        
+    def get_pair_txs(self, pair_address:string):
+        txns = requests.get('https://api.terraswap.io/dashboard/txs?page=1&pair='+pair_address).json()
+        print("get_pair_txs")
+        return txns        
+
+    def get_pair_pricing(self, pair_address):
+        pricing = requests.get('https://api.terraswap.io/dashboard/pairs/'+pair_address).json()
+        print("get_pair_pricing")
+        return pricing
 
     def find_token_pair_contract_from_tokens(self, tokens, contract_addr):
         target_pair = []
