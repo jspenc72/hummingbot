@@ -47,12 +47,13 @@ class LimitOrderUtils():
         price = (float(pricing['token0']['price'])*10**6)
         offset = price-int(BASE_LIMIT_PRICE)
         withinthreshold = offset <= 0 if True else False
-        return offset, withinthreshold
+        return offset, price, withinthreshold
 
     def get_token_sell_limit_order_offset(self, pricing, BASE_LIMIT_PRICE):
-        offset = (float(pricing['token0']['price'])*10**6)-int(BASE_LIMIT_PRICE)
+        price = (float(pricing['token0']['price'])*10**6)
+        offset = price-int(BASE_LIMIT_PRICE)
         withinthreshold = offset >= 0 if True else False
-        return offset, withinthreshold        
+        return offset, price, withinthreshold        
 
     def get_coin_buy_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
         print("get_coin_buy_limit_order_offset", self.terra.oracle.exchange_rates(), currency, BASE_LIMIT_PRICE)

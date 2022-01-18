@@ -240,11 +240,11 @@ class LimitOrder(StrategyPyBase):
     def evaluate_token_pair_offset(self):
         pricing = self.utils.get_pair_pricing(self.token_target)        
         if c_map.get("ORDER_TYPE").value == "BUY":
-            offset, trade = self.utils.get_token_buy_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
-            print("Buy: ", offset, trade)
+            offset, price, trade = self.utils.get_token_buy_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
+            print("Buy: offset, price, trade", offset, price, trade)
         else:
-            offset, trade = self.utils.get_token_sell_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
-            print("Sell: ", offset, trade)
+            offset, price, trade = self.utils.get_token_sell_limit_order_offset(pricing, c_map.get("BASE_LIMIT_PRICE").value)
+            print("Sell: offset, price, trade ", offset, price, trade)
         return offset, trade
 
 
