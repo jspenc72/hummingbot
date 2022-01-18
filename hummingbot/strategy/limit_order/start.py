@@ -4,6 +4,12 @@ from terra_sdk.client.lcd import LCDClient
 import requests
 import json
 import os 
+import time
+import sys
+
+
+from terra_sdk.key.mnemonic import MnemonicKey
+
 
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.strategy.limit_order import LimitOrder
@@ -11,6 +17,16 @@ from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_c
 
 def start(self):
     try:
+        self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
+        SECRET_TERRA_MNEMONIC = os.getenv('SECRET_TERRA_MNEMONIC')
+        if os.getenv("SECRET_TERRA_MNEMONIC") is not None:
+            self.mk = MnemonicKey(mnemonic=SECRET_TERRA_MNEMONIC)
+            self.wallet = self.terra.wallet(self.mk)
+        else:
+            self.logger().info("Something Went Wrong. Shutting Hummingbot down now...")
+            time.sleep(3)
+            sys.exit("Something Went Wrong!")
+       
         connector = c_map.get("connector").value.lower()
         market = c_map.get("TARGET_PAIR").value
         # Get Config Values
@@ -37,6 +53,7 @@ def start(self):
 
         self._initialize_markets([(connector, [market])])
         base, quote = market.split("-")
+
         market_info = MarketTradingPairTuple(self.markets[connector], market, base, quote)
         self.market_trading_pair_tuples = [market_info]
         terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
@@ -98,7 +115,8 @@ def start(self):
             else: 
                 print("unknown trade type, cannot find matching pair")
         print("final trading pair: ", offer_target +" > " + ask_target)
-        self.strategy = LimitOrder(market_info, 
+
+        self.strategy = LimitOrder(market_info,
                                     terra_client=terra,
                                     offer_target= offer_target,
                                     ask_target=ask_target,

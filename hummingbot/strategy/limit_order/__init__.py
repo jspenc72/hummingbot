@@ -2,4 +2,5 @@
 
 # Initializing the project
 from .limit_order import LimitOrder
-__all__ = [limit_order]
+from .limit_order_utils import LimitOrderUtils
+__all__ = [limit_order, limit_order_utils, LimitOrderUtils]

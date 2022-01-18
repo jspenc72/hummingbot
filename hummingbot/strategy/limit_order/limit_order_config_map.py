@@ -25,8 +25,8 @@ limit_order_config_map ={
     ),
     "MINIMUM_WALLET_UST_BALANCE":
         ConfigVar(key="MINIMUM_WALLET_UST_BALANCE", 
-                  prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE >>> ",
-                  default="5"
+                  prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE (Enter 5000000 for $5.00) >>> ",
+                  default="5000000"
     ),
     "ORDER_TYPE":
         ConfigVar(key="ORDER_TYPE", 
@@ -45,7 +45,7 @@ limit_order_config_map ={
                   default="80.00",
                   prompt_on_new=True,
     ),
-    "DEFAULT_BASE_TX_SIZE":
+    "DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL":
         ConfigVar(key="DEFAULT_BASE_TX_SIZE", 
                   prompt="Enter the value of DEFAULT_BASE_TX_SIZE >>> ",
                   default="0.1",
@@ -60,12 +60,6 @@ limit_order_config_map ={
         ConfigVar(key="USE_MAX_TRANSACTION_SIZE", 
                   prompt="Enter the value of USE_MAX_TRANSACTION_SIZE >>> ",
                   default="True",
-                  prompt_on_new=True,
-    ),
-    "EXPOSURE_PERCENTAGE":
-        ConfigVar(key="EXPOSURE_PERCENTAGE", 
-                  prompt="Enter the value of EXPOSURE_PERCENTAGE (0.80) >>> ",
-                  default="0.80",
                   prompt_on_new=True,
     ),
     "TARGET_PAIR": ConfigVar(

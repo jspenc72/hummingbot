@@ -19,6 +19,8 @@ from terra_sdk.core.wasm import MsgStoreCode, MsgInstantiateContract, MsgExecute
 from terra_sdk.core.auth.data.tx import StdFee
 from terra_sdk.core import Coin, Coins
 
+from hummingbot.strategy.limit_order.limit_order_utils import LimitOrderUtils
+from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_config_map as c_map
 from hummingbot.core.event.events import OrderType
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.logger import HummingbotLogger
@@ -47,10 +49,13 @@ class LimitOrder(StrategyPyBase):
                  ):
 
         super().__init__()
+
         self._market_info = market_info
         self._connector_ready = False
         self._order_completed = False
+        self._orders_completed_count = 0
         self._order_attempted = False
+        self._orders_attempted_count = 0
         self.is_coin_pair = False
         self.is_token_pair = False
         self.add_markets([market_info.market])
@@ -59,6 +64,10 @@ class LimitOrder(StrategyPyBase):
         self.ask_target = ask_target 
         self.token_target = token_target
         self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
+        self.utils = LimitOrderUtils(self.terra)
+        # 
+        self.tokens = self.utils.get_tokens()
+
         SECRET_TERRA_MNEMONIC = os.getenv('SECRET_TERRA_MNEMONIC')
         if os.getenv("SECRET_TERRA_MNEMONIC") is not None:
             self.mk = MnemonicKey(mnemonic=SECRET_TERRA_MNEMONIC)
@@ -71,9 +80,33 @@ class LimitOrder(StrategyPyBase):
        
     # After initializing the required variables, we define the tick method. 
     # The tick method is the entry point for the strategy. 
+    def check_run_params(self): 
+        # Get Config Values
+        MAX_NUM_TRADE_ATTEMPTS = c_map.get("MAX_NUM_TRADE_ATTEMPTS").value
+        MINIMUM_WALLET_UST_BALANCE = c_map.get("MINIMUM_WALLET_UST_BALANCE").value
+        ORDER_TYPE = c_map.get("ORDER_TYPE").value
+        BASE_LIMIT_PRICE = c_map.get("BASE_LIMIT_PRICE").value
+        BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
+        DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL = c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value
+        DEFAULT_MAX_SPREAD = c_map.get("DEFAULT_MAX_SPREAD").value
+        USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
+        EXPOSURE_PERCENTAGE = c_map.get("EXPOSURE_PERCENTAGE").value        
+        
+        # Check run conditions
+        balance = self.terra.bank.balance(self.mk.acc_address)
+        condition1 = self.utils.balance_above_min_threshold(balance, self.offer_target, MINIMUM_WALLET_UST_BALANCE)
+        print("balance_above_min_threshold PASS: ", condition1)
+        condition2 = self.utils.check_base_currency(self.offer_target, BASE_TX_CURRENCY)
+        print("check_base_currency PASS: ", condition2)
+        condition3 = self.utils.number_of_trades_below_threshold(self._orders_completed_count, MAX_NUM_TRADE_ATTEMPTS)
+        print("number_of_trades_below_threshold PASS: ", condition3)
+        
+        
+
     def tick(self, timestamp: float):
         # Setup terra client connection to columbus-5 (mainnet)
         # Should parameterize and read id and url from chains.json
+        
 
         if not self._connector_ready:
             self._connector_ready = self._market_info.market.ready
@@ -86,6 +119,8 @@ class LimitOrder(StrategyPyBase):
                 rates = self.terra.oracle.exchange_rates()
 
                 if not self._order_completed or not self._order_attempted:
+                    self.check_run_params()
+
                     self._order_attempted = True
                     # self.logger().info(denoms)
                     # self.logger().info(rates)         
@@ -108,21 +143,24 @@ class LimitOrder(StrategyPyBase):
                     # swapdenoms = ['uaud', 'ucad', 'uchf', 'ucny', 'udkk', 'ueur', 'ugbp', 'uhkd', 'uidr', 'uinr', 'ujpy', 'ukrw', 'umnt', 'uphp', 'usdr', 'usek', 'usgd', 'uthb', 'uusd']
                     # self.logger().info(pairs)
                     # self.logger().info(swapdenoms)
+                    self.logger().info("Limit Order: Simulating Swap before trade")
+                    tx_size = self.utils.get_base_tx_size_from_balance(balance, self.offer_target, c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)
+                    print(tx_size)                        
+                    int_coin = Coin(self.offer_target, tx_size)
+                    rate = self.terra.market.swap_rate(int_coin, self.ask_target)
+                    self.logger().info("swap: "+str(tx_size) + self.offer_target +" > "+ self.ask_target)
+                    self.logger().info("current rate: ")
+                    self.logger().info(rate)
+                    offset, trade = self.utils.get_limit_order_offset(rate, c_map.get("BASE_LIMIT_PRICE").value, c_map.get("EXPOSURE_PERCENTAGE").value)
+                    print(offset, trade)
                     if self.token_target == '':
-                        self.is_coin_pair = True
-                    elif self.token_target != '':                
-                        self.is_token_pair = True
+                        self.is_coin_pair = False
+                    elif self.token_target != '':    
+                        self.is_token_pair = False
                     # Handle if coin pair is coin
                     if self.is_coin_pair:
-                        self.logger().info("Limit Order: Simulating Swap before trade")
-                        int_coin = Coin.from_str("1000000"+self.offer_target)
-                        rate = self.terra.market.swap_rate(int_coin, self.ask_target)
-                        self.logger().info("swap: 1000000"+ self.offer_target +" > "+ self.ask_target)
-                        self.logger().info("current rate:")
-                        self.logger().info(rate)
-                        
                         # swap = MsgSwap(self.mk.acc_address, rate, 'uusd')
-                        swap = MsgSwap(self.mk.acc_address, '1000000'+self.offer_target, self.ask_target)
+                        swap = MsgSwap(self.mk.acc_address, str(tx_size)+''+self.offer_target, self.ask_target)
                         self.logger().info(swap)
                         sequence = self.wallet.sequence()
                         tx = self.wallet.create_and_sign_tx(
@@ -131,6 +169,7 @@ class LimitOrder(StrategyPyBase):
                             gas_adjustment='1.5',                    
                             sequence=sequence
                         )
+                        self._orders_attempted_count = self._orders_attempted_count+1
                         result = self.terra.tx.broadcast(tx)
 
                         self.logger().info("coin transaction complete!")
@@ -138,11 +177,26 @@ class LimitOrder(StrategyPyBase):
                         self.logger().info(result.raw_log)
                         self.logger().info("coin transaction hash: "+ result.txhash)
                         self._order_completed = True
+                        self._orders_completed_count = self._orders_completed_count+1
                         balance = self.terra.bank.balance(self.mk.acc_address)
                         self.logger().info(balance)
                     # Handle if coin pair is token
                     if self.is_token_pair:
                         pool = "terra1j66jatn3k50hjtg2xemnjm8s7y8dws9xqa5y8w" # uluna <> bLuna
+                        # Find contract id
+                        print("searching pairs")
+                        for pair in self.token['pairs'].items():
+                            # print(attribute, value) # example usage   
+                            #  
+                            if pair['asset_infos'][1]['denom'] == self.ask_target and pair['asset_infos'][0]['denom'] == self.offer_target:
+                                print(pair)
+                                print(pair["contract_addr"])
+                                pool = pair["contract_addr"]
+
+                            # if base == attribute:                           # Get coin denomination from Trading Pair name
+                            #     print("found: "+attribute, 'with symbol '+ value)
+                            #     offer_target = value
+
 
                         assets = self.terra.wasm.contract_query(pool, { "pool": {} })
                         self.logger().info("assets")
@@ -158,6 +212,8 @@ class LimitOrder(StrategyPyBase):
                         self.logger().info("beliefPrice")
                         self.logger().info(beliefPrice)
                         self.logger().info(beliefPriceStr)
+                        tx_size = self.utils.get_base_tx_size_from_balance(balance, self.offer_target, c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)
+
                         swp =  {
                                     "swap": {
                                         "max_spread": "0.005",
@@ -167,32 +223,28 @@ class LimitOrder(StrategyPyBase):
                                                     "denom": self.offer_target
                                                 }
                                             },
-                                            "amount": "49981"
+                                            "amount": tx_size
                                         },
                                         "belief_price": beliefPriceStr
                                     }
                               }
+                              
                         self.logger().info(swp)
                         swap = MsgExecuteContract(
                             sender=self.wallet.key.acc_address,
                             contract=pool,
                             execute_msg=swp,
-                            coins=Coins.from_str('49981uluna'),
+                            coins=Coins.from_str(tx_size+''+self.offer_target),
                         )
 
-                        # execute = MsgExecuteContract(
-                        #     self.wallet.key.acc_address,
-                        #     pool, 
-                        #     base64_string
-                        # )
-                        # self.logger().info(execute)
                         tx = self.wallet.create_and_sign_tx(
                             msgs=[swap], 
-                            fee=StdFee(1200000, "100000uusd"),  # gas, fees
+                            gas_prices='2'+self.offer_target,
+                            gas_adjustment='1.5',
                             sequence = self.wallet.sequence()
                         )
                         self.logger().info(tx)
-
+                        self._orders_attempted_count = self._orders_attempted_count+1
                         result = self.terra.tx.broadcast(tx)
                         self.logger().info("token transaction log!")
                         self.logger().info(result.raw_log)
@@ -201,6 +253,7 @@ class LimitOrder(StrategyPyBase):
                         balance = self.terra.bank.balance(self.mk.acc_address)
                         self.logger().info(balance)
                         self._order_completed = True
+                        self._orders_completed_count = self._orders_completed_count+1
 
                     # print(terra.tendermint.node_info())
 
@@ -234,8 +287,6 @@ class LimitOrder(StrategyPyBase):
                     #     -0.01           # price
                     # )
 
-
-
                     # for pair in pairs: 
                     #     self.logger().info(f"Preparing limit buy order for pair: " + pair)
                     #     self.logger().info(f"ERROR: cannot complete transaction not enough funds.")
@@ -250,4 +301,4 @@ class LimitOrder(StrategyPyBase):
 
     async def get_order_price(self, market, trading_pair: str, is_buy: bool, amount: Decimal):
         return await market.get_quote_price(trading_pair, True, 1.0)
-        
+
