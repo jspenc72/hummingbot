@@ -17,6 +17,11 @@ limit_order_config_map ={
                   prompt="Enter the name of the exchange >>> ",
                   prompt_on_new=True,
     ),
+    "TARGET_PAIR": ConfigVar(
+        key="TARGET_PAIR",
+        prompt=market_prompt,
+        prompt_on_new=True,
+    ),
     "MAX_NUM_TRADE_ATTEMPTS":
         ConfigVar(key="MAX_NUM_TRADE_ATTEMPTS", 
                   prompt="Enter the value of MAX_NUM_TRADE_ATTEMPTS >>> ",
@@ -62,10 +67,5 @@ limit_order_config_map ={
                   prompt="Enter the value of USE_MAX_TRANSACTION_SIZE >>> ",
                   default="True",
                   prompt_on_new=True,
-    ),
-    "TARGET_PAIR": ConfigVar(
-        key="TARGET_PAIR",
-        prompt=market_prompt,
-        prompt_on_new=True,
-    ),
+    )
 }

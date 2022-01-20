@@ -43,41 +43,53 @@ class LimitOrderUtils():
         return int(size)
 
     # BASE_TX_CURRENCY
-    def get_token_buy_limit_order_offset(self, pricing, BASE_LIMIT_PRICE):
-        price = (float(pricing['token0']['price'])*10**6)
+
+    def get_balance_from_wallet(self, balance, base):
+        print("get_balance_from_wallet", balance, base)
+        if balance.get(base) is not None:
+            coinbalance = balance[base]
+            return coinbalance
+        else:
+            return False
+
+    # BASE_TX_CURRENCY
+    def get_token_buy_limit_order_offset(self, pricing, BASE_LIMIT_PRICE, BASE_TX_CURRENCY):
+        targettoken = self.parse_token_from_pair_pricing(pricing, BASE_TX_CURRENCY)
+        price = (float(targettoken['price'])*10**6)
         offset = price-int(BASE_LIMIT_PRICE)
         withinthreshold = offset <= 0 if True else False
-        return offset, price, withinthreshold
+        return offset, price, withinthreshold, targettoken
 
-    def get_token_sell_limit_order_offset(self, pricing, BASE_LIMIT_PRICE):
-        price = (float(pricing['token0']['price'])*10**6)
+    def get_token_sell_limit_order_offset(self, pricing, BASE_LIMIT_PRICE, BASE_TX_CURRENCY):
+        targettoken = self.parse_token_from_pair_pricing(pricing, BASE_TX_CURRENCY)
+        price = (float(targettoken['price'])*10**6)
         offset = price-int(BASE_LIMIT_PRICE)
         withinthreshold = offset >= 0 if True else False
-        return offset, price, withinthreshold        
+        return offset, price, withinthreshold, targettoken
 
     def get_coin_buy_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
         print("get_coin_buy_limit_order_offset", self.terra.oracle.exchange_rates(), currency, BASE_LIMIT_PRICE)
         if self.terra.oracle.exchange_rates().get(currency) is not None:
             rate = self.terra.oracle.exchange_rates()[currency]
-            print(rate)
             offset = rate.amount - int(BASE_LIMIT_PRICE)
             withinthreshold = offset <= 0 if True else False
         else: 
             offset = 0
+            rate = 0
             withinthreshold = False
-        return offset, withinthreshold
+        return offset, rate, withinthreshold
 
     def get_coin_sell_limit_order_offset(self, currency, BASE_LIMIT_PRICE):
+        print("get_coin_sell_limit_order_offset", self.terra.oracle.exchange_rates(), currency, BASE_LIMIT_PRICE)
         if self.terra.oracle.exchange_rates().get(currency) is not None:
             rate = self.terra.oracle.exchange_rates()[currency]
-            print(rate)
-            print("get_limit_order_offset", rate, BASE_LIMIT_PRICE)
             offset = rate.amount - int(BASE_LIMIT_PRICE)
             withinthreshold = offset >= 0 if True else False
         else: 
             offset = 0
+            rate = 0
             withinthreshold = False
-        return offset, withinthreshold
+        return offset, rate, withinthreshold
 
 
     def coin_to_denom(self, coin):
@@ -88,11 +100,8 @@ class LimitOrderUtils():
         for attribute, value in coin_to_denom.items():
             # print(attribute, value) # example usage       
             if coin == attribute:                           # Get coin denomination from Trading Pair name
-                print("found: "+attribute, 'with symbol '+ value)
                 target = value
         return target
-
-
 
     def get_tokens(self):
         # Luna-USST
@@ -108,8 +117,17 @@ class LimitOrderUtils():
 
     def get_pair_pricing(self, pair_address):
         pricing = requests.get('https://api.terraswap.io/dashboard/pairs/'+pair_address).json()
-        print("get_pair_pricing")
         return pricing
+
+    def parse_token_from_pair_pricing(self, pricing, symbol):
+        token = []
+        if pricing.get("token0") is not None:
+            if pricing["token0"]["symbol"] == symbol:
+                token = pricing["token0"]
+        if pricing.get("token1") is not None:
+            if pricing["token1"]["symbol"] == symbol:
+                token = pricing["token1"]                                              
+        return token
 
     def find_token_pair_contract_from_tokens(self, tokens, contract_addr):
         target_pair = []
