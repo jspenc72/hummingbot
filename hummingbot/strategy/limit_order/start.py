@@ -71,6 +71,7 @@ def start(self):
         # cw20_data = json.load(fcw20)
         cw20_tokens = requests.get('https://api.terraswap.io/tokens').json()
         cw20_pairs = requests.get('https://api.terraswap.io/dashboard/pairs').json()
+        asset_info_pairs = requests.get('https://api.terraswap.io/pairs').json()
         ibc_data = json.load(fibc)
         cw20pairs = json.load(fcw20pairs)
         coin_to_denom = json.load(fcoin_to_denom)
@@ -88,10 +89,13 @@ def start(self):
         if 'pairAddress' in pair:
             print("token pair lookup successful")
             token_target = pair['pairAddress']
+            pair_asset_info = self.utils.find_asset_info_from_pair(pair['pairAddress'], asset_info_pairs['pairs'])
+            print("asset_info lookup successful")
+            print(pair_asset_info)
             offer_target = pair['token0']
             ask_target = pair['token1']
             # TOKEN-PAIR
-            self.strategy = LimitOrder(market_info,terra_client=terra,offer_target=offer_target,ask_target=ask_target,token_target=token_target,token_pair=pair)
+            self.strategy = LimitOrder(market_info,terra_client=terra,offer_target=offer_target,ask_target=ask_target,token_target=token_target,token_pair=pair,token_pair_asset_info=pair_asset_info)
         else: 
             # SOMETHING-Luna
             print("market is "+market+" token to coin, only option is token to Luna!")

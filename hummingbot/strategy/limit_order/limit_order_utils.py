@@ -152,3 +152,25 @@ class LimitOrderUtils():
                     if pair["pairAlias"] == market:
                         target_pair = pair
         return target_pair
+
+    def find_asset_info_from_pair(self, pairAddress, asset_info_pairs):
+        target_asset_infos = []
+        print("find_asset_info_from_pair")
+        print(pairAddress)
+        print(len(asset_info_pairs))
+        for s in range(len(asset_info_pairs)):
+            p = asset_info_pairs[s]
+            if 'contract_addr' in p:
+                if p["contract_addr"] == pairAddress:
+                        target_asset_infos = p
+        return target_asset_infos
+
+    def parse_native_token_from_token_pair_asset(self, pair):
+        target = []
+        for s in range(len(pair['asset_infos'])):
+            asset_info = pair['asset_infos'][s]
+            if 'native_token' in asset_info:
+                target = asset_info['native_token']
+        return target
+
+

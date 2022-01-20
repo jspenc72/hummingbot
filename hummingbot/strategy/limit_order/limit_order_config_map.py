@@ -22,6 +22,11 @@ limit_order_config_map ={
         prompt=market_prompt,
         prompt_on_new=True,
     ),
+    "OFFER_ASSET": ConfigVar(
+        key="OFFER_ASSET",
+        prompt="Enter the symbol of the asset you wish to offer in buy orders >>> ",
+        prompt_on_new=True,
+    ),    
     "MAX_NUM_TRADE_ATTEMPTS":
         ConfigVar(key="MAX_NUM_TRADE_ATTEMPTS", 
                   prompt="Enter the value of MAX_NUM_TRADE_ATTEMPTS >>> ",
@@ -47,7 +52,7 @@ limit_order_config_map ={
     ),
     "BASE_TX_CURRENCY":
         ConfigVar(key="BASE_TX_CURRENCY", 
-                  prompt="Enter the value of BASE_TX_CURRENCY (UST | Luna | bLuna)>>> ",
+                  prompt="Enter the symbol to use for fees and gas (UST | Luna | bLuna)>>> ",
                   default="UST",
                   prompt_on_new=True,
     ),

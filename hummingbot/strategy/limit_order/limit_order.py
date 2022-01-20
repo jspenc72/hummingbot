@@ -46,7 +46,8 @@ class LimitOrder(StrategyPyBase):
                  offer_target: string,
                  ask_target: string,
                  token_target: string, 
-                 token_pair
+                 token_pair,
+                 token_pair_asset_info
                  ):
 
         super().__init__()
@@ -66,6 +67,7 @@ class LimitOrder(StrategyPyBase):
         self.ask_target = ask_target 
         self.token_target = token_target
         self.token_pair = token_pair
+        self.token_pair_asset_info = token_pair_asset_info
         # Setup terra client connection to columbus-5 (mainnet)
         # Should parameterize and read id and url from chains.json
         self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
@@ -204,35 +206,65 @@ class LimitOrder(StrategyPyBase):
                         amt = balance.amount*10**-6
                         # Configured Tradable balance in BASE CURRENCY
                         tradableamt = int(float(c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)*balance.amount)
+                        self.logger().info('token_pair')
+                        self.logger().info(self.token_pair)
                         # Convert to target token using ratio
                         final_tx_size = int(amt*float(ratio)*10**6)
+                        # native_token = self.utils.parse_native_token_from_token_pair_asset(self.token_pair_asset_info)
+                        # print(native_token)
                         # return 
+
+                        sellinfo = []
+                        m = c_map.get("TARGET_PAIR").value
+                        if m == 'Luna-UST': 
+                            sellinfo = assets["assets"][0]['info']
+                        elif m == 'UST-bLuna': 
+                            sellinfo = assets["assets"][1]['info']
+                            if 'token1' in self.pricing:
+                                beliefPriceStr = self.pricing['token1']['price']
+                        elif m == 'UST-bETH': 
+                            sellinfo = assets["assets"][1]['info']
+                            if 'token1' in self.pricing:
+                                beliefPriceStr = self.pricing['token1']['price']
+                        else:
+                            sellinfo = assets["assets"][1]['info']
+                            if 'token1' in self.pricing:
+                                beliefPriceStr = self.pricing['token1']['price']
+                            self.logger().info("You are running with an Untested token pair, proceed with caution.")
+                        print(sellinfo)
                         swp = {
                                 "swap": {
-                                    "max_spread": "0.005",
+                                    "max_spread": c_map.get("DEFAULT_MAX_SPREAD").value,
                                     "offer_asset": {
-                                        "info": {
-                                            "native_token": {
-                                                "denom": self.ask_target
-                                            }
-                                        },
+                                        "info": sellinfo,
                                         "amount": str(tradableamt)
                                     },
                                     "belief_price": beliefPriceStr
                                 }
                             }
                             
+                        # SELL 
+                        # msg = base64({"swap":{"max_spread":"0.005","belief_price":"0.000312527301842629"}})
+                        # 
+                        # {
+                        #   "send": {
+                        #       "msg": "eyJzd2FwIjp7Im1heF9zcHJlYWQiOiIwLjAwNSIsImJlbGllZl9wcmljZSI6IjAuMDAwMzEyNTI3MzAxODQyNjI5In19",
+                        #       "amount": "2293",
+                        #       "contract": "terra1c0afrdc5253tkp5wt7rxhuj42xwyf2lcre0s7c"
+                        #   }
+                        # }
+
                         self.logger().info(swp)
                         swap = MsgExecuteContract(
                             sender=self.wallet.key.acc_address,
                             contract=pool,
                             execute_msg=swp,
-                            coins=Coins.from_str(str(tradableamt)+''+self.ask_target),
+                            coins=Coins.from_str(str(tradableamt)+''+sellinfo['native_token']['denom']),
                         )
                         self.logger().info(swap)
                         tx = self.wallet.create_and_sign_tx(
                             msgs=[swap], 
-                            gas_prices='2'+self.ask_target,
+                            gas_prices='2'+self.utils.coin_to_denom(c_map.get("BASE_TX_CURRENCY").value),
                             gas_adjustment='1.5',
                             sequence = self.wallet.sequence()
                         )                        
@@ -265,6 +297,10 @@ class LimitOrder(StrategyPyBase):
 
         if c_map.get("ORDER_TYPE").value == "BUY":                              
             offset, price, trade, token = self.utils.get_token_buy_limit_order_offset(self.pricing, c_map.get("BASE_LIMIT_PRICE").value, target)
+            self.current_offset = offset*10**-6
+            self.current_price = price*10**-6
+            self.current_trade = trade
+            self.current_token = token
             self.logger().info(token)
             self.logger().info("Buy: offset, price, trade: "+str(offset)+" "+str(price)+" "+str(trade))
             self.logger().info("Buy: offset, price, trade: "+str(offset*10**-6)+" "+str(price*10**-6)+" "+str(trade))
@@ -327,6 +363,9 @@ class LimitOrder(StrategyPyBase):
                             ["USE_MAX_TRANSACTION_SIZE: ", c_map.get("USE_MAX_TRANSACTION_SIZE").value]]
         
 
+
+
+
         for value in configcols: 
             row = " ".join(value)
             rows.append(row)
@@ -343,5 +382,8 @@ class LimitOrder(StrategyPyBase):
         rows.append("orders completed / orders attempted / ticks processed")
         rows.append(str(self._orders_completed_count)+" / "+str(self._orders_attempted_count)+" / "+str(self._tick_count))
         
+        rows.append("Limit Buy: offset --- price ---- trade")
+        rows.append(str(self.current_offset)+" ---- "+str(self.current_price)+" ---- "+str(self.current_trade))
+
 
         return "\n".join(rows)
