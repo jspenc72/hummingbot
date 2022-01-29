@@ -15,9 +15,13 @@ class LimitOrderUtils():
     # MAX_NUM_TRADE_ATTEMPTS
     def number_of_trades_below_threshold(self, tradecount, threshold):
         print("number_of_trades_below_threshold", tradecount, threshold)
-        return tradecount < int(threshold)
+        result = tradecount < int(threshold)
+        
+        return result
 
     # MINIMUM_WALLET_UST_BALANCE
+    # WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE
+
     def balance_above_min_threshold(self, balance, currency, threshold):
         print("balance_above_min_threshold", balance, currency, threshold)
         if balance.get(currency) is not None:
@@ -26,6 +30,7 @@ class LimitOrderUtils():
             return coinbal.amount > int(threshold)            
         else:
             return False
+
 
     # BASE_TX_CURRENCY
     def check_base_currency(self, actualbase, desiredbase):

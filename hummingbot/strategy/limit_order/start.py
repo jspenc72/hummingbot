@@ -30,12 +30,12 @@ def start(self):
         # Get Config Values
         MAX_NUM_TRADE_ATTEMPTS = c_map.get("MAX_NUM_TRADE_ATTEMPTS").value
         MINIMUM_WALLET_UST_BALANCE = c_map.get("MINIMUM_WALLET_UST_BALANCE").value
-        ORDER_TYPE = c_map.get("ORDER_TYPE").value
+        ORDER_TYPE = "BUY"
         BASE_LIMIT_PRICE = c_map.get("BASE_LIMIT_PRICE").value
         BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
         DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL = c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value
         DEFAULT_MAX_SPREAD = c_map.get("DEFAULT_MAX_SPREAD").value
-        USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
+        # USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
         
         print("Running limit_order with config: ")        
         print("MAX_NUM_TRADE_ATTEMPTS: " + MAX_NUM_TRADE_ATTEMPTS)
@@ -45,7 +45,7 @@ def start(self):
         print("BASE_TX_CURRENCY: " + BASE_TX_CURRENCY)
         print("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL: " + DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL)
         print("DEFAULT_MAX_SPREAD: " + DEFAULT_MAX_SPREAD)
-        print("USE_MAX_TRANSACTION_SIZE: " + USE_MAX_TRANSACTION_SIZE)
+        # print("USE_MAX_TRANSACTION_SIZE: " + USE_MAX_TRANSACTION_SIZE)
 
         self._initialize_markets([(connector, [market])])
         base, quote = market.split("-")

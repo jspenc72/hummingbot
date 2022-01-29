@@ -52,11 +52,12 @@ class LimitOrder(StrategyPyBase):
 
         super().__init__()
 
+        self.ORDER_TYPE = c_map.get("ORDER_TYPE").value
         self._market_info = market_info
         self._connector_ready = False
-        self._order_completed = False
         self._tick_count = 0
         self._orders_completed_count = 0
+        self._order_completed = False
         self._order_attempted = False
         self._orders_attempted_count = 0
         self.is_coin_pair = False
@@ -79,7 +80,8 @@ class LimitOrder(StrategyPyBase):
         if os.getenv("SECRET_TERRA_MNEMONIC") is not None:
             self.mk = MnemonicKey(mnemonic=SECRET_TERRA_MNEMONIC)
             self.wallet = self.terra.wallet(self.mk)
- 
+            self.balance = self.terra.bank.balance(self.mk.acc_address)
+            self.last_trade_balance = self.terra.bank.balance(self.mk.acc_address)
         else:
             self.logger().info("Something Went Wrong. Shutting Hummingbot down now...")
             time.sleep(3)
@@ -92,16 +94,16 @@ class LimitOrder(StrategyPyBase):
 
         MAX_NUM_TRADE_ATTEMPTS = c_map.get("MAX_NUM_TRADE_ATTEMPTS").value
         MINIMUM_WALLET_UST_BALANCE = c_map.get("MINIMUM_WALLET_UST_BALANCE").value
-        ORDER_TYPE = c_map.get("ORDER_TYPE").value
+        ORDER_TYPE = "BUY"
         BASE_LIMIT_PRICE = c_map.get("BASE_LIMIT_PRICE").value
         BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
         DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL = c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value
         DEFAULT_MAX_SPREAD = c_map.get("DEFAULT_MAX_SPREAD").value
-        USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
+        # USE_MAX_TRANSACTION_SIZE = c_map.get("USE_MAX_TRANSACTION_SIZE").value
         
         # Check run conditions
-        balance = self.terra.bank.balance(self.mk.acc_address)
-        condition1 = self.utils.balance_above_min_threshold(balance, self.utils.coin_to_denom(BASE_TX_CURRENCY), MINIMUM_WALLET_UST_BALANCE)
+        self.balance = self.terra.bank.balance(self.mk.acc_address)
+        condition1 = self.utils.balance_above_min_threshold(self.balance, self.utils.coin_to_denom(BASE_TX_CURRENCY), MINIMUM_WALLET_UST_BALANCE)
         self.logger().info("balance_above_min_threshold PASS: "+ str(condition1))
         # condition2 = self.utils.check_base_currency(self.offer_target, BASE_TX_CURRENCY)
         # print("check_base_currency PASS: ", condition2)
@@ -148,7 +150,7 @@ class LimitOrder(StrategyPyBase):
                     self.logger().info("Current Limit Offset: ", offset)
                     return                    
 
-            if not self._order_completed or not self._order_attempted:
+            if not self._order_attempted:
                 if self.check_run_params():                            
                     self._order_attempted = True
                     # Handle if coin pair is coin
@@ -213,46 +215,68 @@ class LimitOrder(StrategyPyBase):
                         # native_token = self.utils.parse_native_token_from_token_pair_asset(self.token_pair_asset_info)
                         # print(native_token)
                         # return 
+                        if self.ORDER_TYPE == "BUY":     
+                            sellinfo = []
+                            m = c_map.get("TARGET_PAIR").value
+                            if m == 'Luna-UST': 
+                                sellinfo = assets["assets"][0]['info']
+                            elif m == 'UST-bLuna': 
+                                sellinfo = assets["assets"][1]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                            elif m == 'UST-bETH': 
+                                sellinfo = assets["assets"][1]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                            else:
+                                sellinfo = assets["assets"][1]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                                self.logger().info("You are running with an Untested token pair, proceed with caution.")
+                            print(sellinfo)
 
-                        sellinfo = []
-                        m = c_map.get("TARGET_PAIR").value
-                        if m == 'Luna-UST': 
-                            sellinfo = assets["assets"][0]['info']
-                        elif m == 'UST-bLuna': 
-                            sellinfo = assets["assets"][1]['info']
-                            if 'token1' in self.pricing:
-                                beliefPriceStr = self.pricing['token1']['price']
-                        elif m == 'UST-bETH': 
-                            sellinfo = assets["assets"][1]['info']
-                            if 'token1' in self.pricing:
-                                beliefPriceStr = self.pricing['token1']['price']
+                            swp = {
+                                    "swap": {
+                                        "max_spread": c_map.get("DEFAULT_MAX_SPREAD").value,
+                                        "offer_asset": {
+                                            "info": sellinfo,
+                                            "amount": str(tradableamt)
+                                        },
+                                        "belief_price": beliefPriceStr
+                                    }
+                                }
                         else:
-                            sellinfo = assets["assets"][1]['info']
-                            if 'token1' in self.pricing:
-                                beliefPriceStr = self.pricing['token1']['price']
-                            self.logger().info("You are running with an Untested token pair, proceed with caution.")
-                        print(sellinfo)
-                        swp = {
-                                "swap": {
-                                    "max_spread": c_map.get("DEFAULT_MAX_SPREAD").value,
-                                    "offer_asset": {
-                                        "info": sellinfo,
-                                        "amount": str(tradableamt)
-                                    },
-                                    "belief_price": beliefPriceStr
+                            sellinfo = []
+                            m = c_map.get("TARGET_PAIR").value
+                            if m == 'Luna-UST': 
+                                sellinfo = assets["assets"][1]['info']
+                            elif m == 'UST-bLuna': 
+                                sellinfo = assets["assets"][0]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                            elif m == 'UST-bETH': 
+                                sellinfo = assets["assets"][0]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                            else:
+                                sellinfo = assets["assets"][0]['info']
+                                if 'token1' in self.pricing:
+                                    beliefPriceStr = self.pricing['token1']['price']
+                                self.logger().info("You are running with an Untested token pair, proceed with caution.")
+                            print(sellinfo)
+
+                        # SELL 
+                            pl = {"swap":{"max_spread":c_map.get("DEFAULT_MAX_SPREAD").value,"belief_price":beliefPriceStr}}
+                            print(pl)
+                            msg = self.b64EncodeString(pl)
+                            print(msg)
+                            swp = {
+                                "send": {
+                                    "msg": msg,
+                                    "amount": str(tradableamt),
+                                    "contract": pool
                                 }
                             }
-                            
-                        # SELL 
-                        # msg = base64({"swap":{"max_spread":"0.005","belief_price":"0.000312527301842629"}})
-                        # 
-                        # {
-                        #   "send": {
-                        #       "msg": "eyJzd2FwIjp7Im1heF9zcHJlYWQiOiIwLjAwNSIsImJlbGllZl9wcmljZSI6IjAuMDAwMzEyNTI3MzAxODQyNjI5In19",
-                        #       "amount": "2293",
-                        #       "contract": "terra1c0afrdc5253tkp5wt7rxhuj42xwyf2lcre0s7c"
-                        #   }
-                        # }
 
                         self.logger().info(swp)
                         swap = MsgExecuteContract(
@@ -276,12 +300,43 @@ class LimitOrder(StrategyPyBase):
                         self.logger().info(result.raw_log)
                         self.logger().info("token transaction complete!")
                         self.logger().info(result.txhash)
-                        balance = self.terra.bank.balance(self.mk.acc_address)
-                        self.logger().info(balance)
+                        self.balance = self.terra.bank.balance(self.mk.acc_address)
+                        self.last_trade_balance = self.terra.bank.balance(self.mk.acc_address)
+                        self.logger().info(self.balance)
                         self._order_completed = True
                         self._orders_completed_count = self._orders_completed_count+1
 
                     self._order_attempted = True
+                else:
+                    # If exceeded max trade attempts, exit
+                    self.logger().info("Exit tick due to MAX_NUM_TRADE_ATTEMPTS: ", c_map.get("MAX_NUM_TRADE_ATTEMPTS").value)
+                    sys.exit("Something Went Wrong!")
+                    # If wallet balance has not increased, wait for next trade
+            elif self._order_completed:
+                self.logger().info("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE: "+ c_map.get("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE").value)
+                # If wallet balance has increased, reset order attempted next trade
+                if c_map.get("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE").value == 'True':
+                    # Get updated Balance
+                    self.balance = self.terra.bank.balance(self.mk.acc_address)
+                    BASE_TX_CURRENCY = c_map.get("BASE_TX_CURRENCY").value
+                    self.logger().info("Waiting for balance to increase from last_trade_balance: "+str(self.last_trade_balance[self.utils.coin_to_denom(BASE_TX_CURRENCY)].amount)+" < "+str(self.balance[self.utils.coin_to_denom(BASE_TX_CURRENCY)].amount))
+                    MINIMUM_WALLET_UST_BALANCE = self.utils.get_balance_from_wallet(self.last_trade_balance, self.utils.coin_to_denom(BASE_TX_CURRENCY))
+                    condition1 = self.utils.balance_above_min_threshold(self.balance, self.utils.coin_to_denom(BASE_TX_CURRENCY), MINIMUM_WALLET_UST_BALANCE.amount)                
+                    self.logger().info("Balance Increased: "+str(condition1))
+                    if condition1:
+                        self._order_attempted = False
+                else:
+                    self.logger().info("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE: "+ c_map.get("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE").value)
+                    condition_max_trade_attempts = self.utils.number_of_trades_below_threshold(self._orders_attempted_count, c_map.get("MAX_NUM_TRADE_ATTEMPTS").value)
+                    if condition_max_trade_attempts:
+                        self.logger().info("Exit tick due to MAX_NUM_TRADE_ATTEMPTS: "+c_map.get("MAX_NUM_TRADE_ATTEMPTS").value)
+                        sys.exit("Exceeded max Trade Attepts!"+ c_map.get("MAX_NUM_TRADE_ATTEMPTS").value)                    
+
+
+    def b64EncodeString(self, msg):
+        msg_bytes = json.dumps(msg, indent=0).encode('ascii')
+        base64_bytes = base64.b64encode(msg_bytes)
+        return base64_bytes.decode('ascii')
 
     def evaluate_token_pair_offset(self):
         self.pricing = self.utils.get_pair_pricing(self.token_target)    
@@ -295,7 +350,7 @@ class LimitOrder(StrategyPyBase):
             target = base       
 
 
-        if c_map.get("ORDER_TYPE").value == "BUY":                              
+        if self.ORDER_TYPE == "BUY":                              
             offset, price, trade, token = self.utils.get_token_buy_limit_order_offset(self.pricing, c_map.get("BASE_LIMIT_PRICE").value, target)
             self.current_offset = offset*10**-6
             self.current_price = price*10**-6
@@ -306,6 +361,10 @@ class LimitOrder(StrategyPyBase):
             self.logger().info("Buy: offset, price, trade: "+str(offset*10**-6)+" "+str(price*10**-6)+" "+str(trade))
         else:
             offset, price, trade, token = self.utils.get_token_sell_limit_order_offset(self.pricing, c_map.get("BASE_LIMIT_PRICE").value, target)
+            self.current_offset = offset*10**-6
+            self.current_price = price*10**-6
+            self.current_trade = trade
+            self.current_token = token            
             self.logger().info(token)
             self.logger().info("Sell: offset, price, trade: "+str(offset*10**-6)+" "+str(price*10**-6)+" "+str(trade))
         return offset, trade
@@ -318,7 +377,7 @@ class LimitOrder(StrategyPyBase):
         self.logger().info("current rate: ")
         self.logger().info(rate)
 
-        if c_map.get("ORDER_TYPE").value == "BUY":
+        if self.ORDER_TYPE == "BUY":
             offset, rate, trade = self.utils.get_coin_buy_limit_order_offset(rate, c_map.get("BASE_LIMIT_PRICE").value)
             self.logger().info("Buy: offset, rate, trade: "+str(offset)+" "+str(rate)+" "+str(trade))
             self.logger().info("Buy: offset, rate, trade: "+str(offset*10**-6)+" "+str(rate*10**-6)+" "+str(trade))
@@ -355,17 +414,12 @@ class LimitOrder(StrategyPyBase):
         # active_orders = self.market_info_to_active_orders.get(self._market_info, [])
         # SECTION BOT CONFIG
         configcols = [["MAX_NUM_TRADE_ATTEMPTS: ", c_map.get("MAX_NUM_TRADE_ATTEMPTS").value],["MINIMUM_WALLET_UST_BALANCE: ", c_map.get("MINIMUM_WALLET_UST_BALANCE").value],
-                            ["ORDER_TYPE: ", c_map.get("ORDER_TYPE").value],
+                            ["WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE: ", c_map.get("WAIT_FOR_OFFER_BALANCE_CHANGE_AFTER_TRADE").value],
                             ["BASE_LIMIT_PRICE: ", c_map.get("BASE_LIMIT_PRICE").value],
                             ["BASE_TX_CURRENCY: ", c_map.get("BASE_TX_CURRENCY").value],
                             ["DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL: ", c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value],
-                            ["DEFAULT_MAX_SPREAD: ", c_map.get("DEFAULT_MAX_SPREAD").value],
-                            ["USE_MAX_TRANSACTION_SIZE: ", c_map.get("USE_MAX_TRANSACTION_SIZE").value]]
+                            ["DEFAULT_MAX_SPREAD: ", c_map.get("DEFAULT_MAX_SPREAD").value]]
         
-
-
-
-
         for value in configcols: 
             row = " ".join(value)
             rows.append(row)
