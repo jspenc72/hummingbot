@@ -66,7 +66,9 @@ class LimitOrderUtils():
         return offset, price, withinthreshold, targettoken
 
     def get_token_sell_limit_order_offset(self, pricing, BASE_LIMIT_PRICE, BASE_TX_CURRENCY):
+        print("get_token_sell_limit_order_offset")
         targettoken = self.parse_token_from_pair_pricing(pricing, BASE_TX_CURRENCY)
+        print(targettoken)
         price = (float(targettoken['price'])*10**6)
         offset = price-int(BASE_LIMIT_PRICE)
         withinthreshold = offset >= 0 if True else False
@@ -147,9 +149,9 @@ class LimitOrderUtils():
 
     def find_token_pair_contract_from_pairs(self, pairs, market):
         target_pair = []
-        print("find_token_pair_contract_from_pairs")
-        print(market)
-        print(len(pairs))
+        # print("find_token_pair_contract_from_pairs")
+        # print(market)
+        # print(len(pairs))
         for s in range(len(pairs)):
             pair = pairs[s]
             if 'pairAddress' in pair:

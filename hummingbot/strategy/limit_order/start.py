@@ -7,6 +7,7 @@ import os
 import time
 import sys
 from terra_sdk.key.mnemonic import MnemonicKey
+from terra_sdk.core import Coins
 from hummingbot.strategy.limit_order import LimitOrderUtils
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.strategy.limit_order import LimitOrder
@@ -14,7 +15,9 @@ from hummingbot.strategy.limit_order.limit_order_config_map import limit_order_c
 
 def start(self):
     try:
-        self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev")
+        res = requests.get("https://fcd.terra.dev/v1/txs/gas_prices")
+
+        self.terra = LCDClient(chain_id="columbus-5", url="https://lcd.terra.dev", gas_prices=Coins(res.json()), gas_adjustment="1.4")
         self.utils = LimitOrderUtils(self.terra)
         SECRET_TERRA_MNEMONIC = os.getenv('SECRET_TERRA_MNEMONIC')
         if os.getenv("SECRET_TERRA_MNEMONIC") is not None:
@@ -87,11 +90,11 @@ def start(self):
         pair = self.utils.find_token_pair_contract_from_pairs(cw20_pairs, market)
         print(pair)
         if 'pairAddress' in pair:
-            print("token pair lookup successful")
+            print("token pair lookup successful...")
             token_target = pair['pairAddress']
             pair_asset_info = self.utils.find_asset_info_from_pair(pair['pairAddress'], asset_info_pairs['pairs'])
-            print("asset_info lookup successful")
-            print(pair_asset_info)
+            print("asset_info lookup successful...")
+            # print(pair_asset_info)
             offer_target = pair['token0']
             ask_target = pair['token1']
             # TOKEN-PAIR

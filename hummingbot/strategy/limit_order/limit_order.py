@@ -203,7 +203,7 @@ class LimitOrder(StrategyPyBase):
                         
                         targettoken = self.utils.parse_token_from_pair_pricing(self.pricing, c_map.get("BASE_TX_CURRENCY").value)
                         ratio = targettoken['price']
-                        balance = self.utils.get_balance_from_wallet(balance, self.utils.coin_to_denom(c_map.get("BASE_TX_CURRENCY").value))
+                        balance = self.utils.get_balance_from_wallet(balance, self.utils.coin_to_denom(c_map.get("OFFER_ASSET").value))
                         # Total balance in BASE CURRENCY
                         amt = balance.amount*10**-6
                         # Configured Tradable balance in BASE CURRENCY
@@ -246,6 +246,7 @@ class LimitOrder(StrategyPyBase):
                                     }
                                 }
                         else:
+                        # SELL 
                             sellinfo = []
                             m = c_map.get("TARGET_PAIR").value
                             if m == 'Luna-UST': 
@@ -265,18 +266,29 @@ class LimitOrder(StrategyPyBase):
                                 self.logger().info("You are running with an Untested token pair, proceed with caution.")
                             print(sellinfo)
 
-                        # SELL 
                             pl = {"swap":{"max_spread":c_map.get("DEFAULT_MAX_SPREAD").value,"belief_price":beliefPriceStr}}
                             print(pl)
                             msg = self.b64EncodeString(pl)
                             print(msg)
+
                             swp = {
-                                "send": {
-                                    "msg": msg,
-                                    "amount": str(tradableamt),
-                                    "contract": pool
+                                    "swap": {
+                                        "max_spread": c_map.get("DEFAULT_MAX_SPREAD").value,
+                                        "offer_asset": {
+                                            "info": sellinfo,
+                                            "amount": str(tradableamt)
+                                        },
+                                        "belief_price": beliefPriceStr
+                                    }
                                 }
-                            }
+
+                            # swp = {
+                            #     "send": {
+                            #         "msg": msg,
+                            #         "amount": str(tradableamt),
+                            #         "contract": pool
+                            #     }
+                            # }
 
                         self.logger().info(swp)
                         swap = MsgExecuteContract(
@@ -366,6 +378,7 @@ class LimitOrder(StrategyPyBase):
             self.current_trade = trade
             self.current_token = token            
             self.logger().info(token)
+            self.logger().info("Buy: offset, price, trade: "+str(offset)+" "+str(price)+" "+str(trade))
             self.logger().info("Sell: offset, price, trade: "+str(offset*10**-6)+" "+str(price*10**-6)+" "+str(trade))
         return offset, trade
 

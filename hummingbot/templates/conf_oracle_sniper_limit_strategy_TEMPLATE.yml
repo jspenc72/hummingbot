@@ -1,9 +1,11 @@
 template_version: 1
 strategy: oracle_sniper_limit
-connector: terraswap
+connector_1: terraswap
+connector_2: gate_io
 MAX_NUM_TRADE_ATTEMPTS: '2'
 MINIMUM_WALLET_UST_BALANCE: '5000000'
-TARGET_PAIR: LUNA-UST
+ORACLE_PAIR: LUNA-USDT
+TARGET_PAIR: Luna-UST
 OFFER_ASSET: UST
 ORDER_TYPE: BUY
 BASE_LIMIT_PRICE: '80.00'
