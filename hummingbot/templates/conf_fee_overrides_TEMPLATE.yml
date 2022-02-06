@@ -16,10 +16,10 @@ template_version: 11
 # [exchange name]_maker_fixed_fees:  # a list of lists of token-fee pairs (e.g. [["ETH", 1]])
 # [exchange name]_taker_fixed_fees:  # a list of lists of token-fee pairs (e.g. [["ETH", 1]])
 
-binance_percent_fee_token:  # BNB
-binance_maker_percent_fee:  # 0.75
-binance_taker_percent_fee:  # 0.75
-binance_buy_percent_fee_deducted_from_returns:  # True
+binance_percent_fee_token:  BNB
+binance_maker_percent_fee:  0.75
+binance_taker_percent_fee:  0.75
+binance_buy_percent_fee_deducted_from_returns:  True
 
-balancer_maker_fixed_fees:  # [[ETH, 0.0002]]
-balancer_taker_fixed_fees:  # [[ETH, 0.0002]]
+balancer_maker_fixed_fees:  [[ETH, 0.0002]]
+balancer_taker_fixed_fees:  [[ETH, 0.0002]]

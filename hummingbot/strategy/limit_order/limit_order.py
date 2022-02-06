@@ -172,8 +172,10 @@ class LimitOrder(StrategyPyBase):
                             sequence=sequence
                         )
                         self._orders_attempted_count = self._orders_attempted_count+1
+                        balance = self.terra.bank.balance(self.mk.acc_address)
+                        self.logger().info("balance before transaction:")
+                        self.logger().info(balance)
                         result = self.terra.tx.broadcast(tx)
-
                         self.logger().info("coin transaction complete!")
                         self.logger().info("coin transaction log!")
                         self.logger().info(result.raw_log)
@@ -181,6 +183,7 @@ class LimitOrder(StrategyPyBase):
                         self._order_completed = True
                         self._orders_completed_count = self._orders_completed_count+1
                         balance = self.terra.bank.balance(self.mk.acc_address)
+                        self.logger().info("balance after transaction:")
                         self.logger().info(balance)
                     # Handle if coin pair is token
                     if self.is_token_pair:
