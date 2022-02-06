@@ -169,10 +169,34 @@ oracle_sniper_limit_config_map ={
                   prompt="Enter the value of DEFAULT_MAX_SPREAD >>> ",
                   default="0.005"
     ),
-    "USE_MAX_TRANSACTION_SIZE":
-        ConfigVar(key="USE_MAX_TRANSACTION_SIZE", 
-                  prompt="Enter the value of USE_MAX_TRANSACTION_SIZE >>> ",
+    "PAPER_TRADE":
+        ConfigVar(key="PAPER_TRADE", 
+                  prompt="Enter the value of PAPER_TRADE >>> ",
                   default="True",
+                  prompt_on_new=True,
+    ),
+    "MOVING_AVERAGE_TICKS":
+        ConfigVar(key="MOVING_AVERAGE_TICKS", 
+                  prompt="Enter the value of MOVING_AVERAGE_TICKS >>> ",
+                  default="60",
+                  prompt_on_new=True,
+    ),
+    "UPPER_LIMIT_PERCENT":
+        ConfigVar(key="UPPER_LIMIT_PERCENT", 
+                  prompt="Enter the value of UPPER_LIMIT_PERCENT >>> ",
+                  default="0.002",
+                  prompt_on_new=True,
+    ),
+    "LOWER_LIMIT_PERCENT":
+        ConfigVar(key="LOWER_LIMIT_PERCENT", 
+                  prompt="Enter the value of LOWER_LIMIT_PERCENT >>> ",
+                  default="0.001",
+                  prompt_on_new=True,
+    ),
+    "MOVING_AVERAGE_WINDOW":
+        ConfigVar(key="MOVING_AVERAGE_WINDOW", 
+                  prompt="Enter the value of MOVING_AVERAGE_WINDOW >>> ",
+                  default="15",
                   prompt_on_new=True,
     )
 }
