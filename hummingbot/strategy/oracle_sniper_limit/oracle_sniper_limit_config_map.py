@@ -140,6 +140,11 @@ oracle_sniper_limit_config_map ={
                   prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE (Enter 5000000 for $5.00) >>> ",
                   default="5000000"
     ),
+    "MINIMUM_WALLET_UST_BALANCE_FOR_SELL":
+        ConfigVar(key="MINIMUM_WALLET_UST_BALANCE_FOR_SELL", 
+                  prompt="Enter the value of MINIMUM_WALLET_UST_BALANCE_FOR_SELL (Enter 500000 for $0.50) >>> ",
+                  default="500000"
+    ),
     "ORDER_TYPE":
         ConfigVar(key="ORDER_TYPE", 
                   prompt="Enter the value of ORDER_TYPE (BUY | SELL)>>> ",

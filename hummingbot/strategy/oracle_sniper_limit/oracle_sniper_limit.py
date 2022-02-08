@@ -139,15 +139,15 @@ class OracleSniperLimit(StrategyPyBase):
         self.pricing = self.terra_service.get_pair_pricing(self.token_target)
         
         if market == 'Luna-UST': 
-            wallet_ask_asset_balance = balance.get(self.terra_service.coin_to_denom(base))
+            wallet_ask_asset_balance =  self.terra_service.get_currency_amount_from_wallet_balance(balance, self.terra_service.coin_to_denom(base))
         else:
-            wallet_ask_asset_balance = balance.get(self.terra_service.coin_to_denom(quote))
+            wallet_ask_asset_balance = self.terra_service.get_currency_amount_from_wallet_balance(balance, self.terra_service.coin_to_denom(quote))
 
-        print(self.ask_target_pricing)
+        # print(self.ask_target_pricing)
         # 1. Get Oracle Price
         for market_info in [self._market_info_1]:
             market, trading_pair, base_asset, quote_asset = market_info
-            print("did request updated oracle pricing: "+trading_pair)
+            self.logger().info("Updated oracle pricing: "+trading_pair)
             buy_price = await market.get_quote_price(trading_pair, True, self._order_quote_amount)
             sell_price = await market.get_quote_price(trading_pair, False, self._order_quote_amount)
             # check for unavailable price data
@@ -155,16 +155,16 @@ class OracleSniperLimit(StrategyPyBase):
             sell_price = PerformanceMetrics.smart_round(Decimal(str(sell_price)), 8) if sell_price is not None else '-'
             mid_price = PerformanceMetrics.smart_round(((buy_price + sell_price) / 2), 8) if '-' not in [buy_price, sell_price] else '-'
             if buy_price == '-':
-                print('oracle price data unavailable')
+                self.logger().info('oracle price data unavailable')
                 return
             ask_price = Decimal(self.ask_target_pricing['price'])
-            print("Exchange", "Market", "Sell Price", "Buy Price", "Mid Price", self.ask_target_pricing['symbol']+" ASK PRICE")
-            print(market.display_name, trading_pair, sell_price, buy_price, mid_price, ask_price)
+            # print("Exchange", "Market", "Sell Price", "Buy Price", "Mid Price", self.ask_target_pricing['symbol']+" ASK PRICE")
+            # print(market.display_name, trading_pair, sell_price, buy_price, mid_price, ask_price)
             # round ask price
             ask_price = PerformanceMetrics.smart_round(ask_price, 8)
         for position in self.positions:
             position.eval_pricing(ask_price, buy_price, sell_price, mid_price, balance)
-            position.update_buy_params(pool=self.token_target, pricing=self.pricing)
+            position.update_buy_params(pool=self.token_target, pricing=self.pricing, wallet_ask_asset_balance=wallet_ask_asset_balance)
 
         self.logger().info("----------------TICKEND----------------")
 
@@ -239,6 +239,9 @@ class OracleSniperLimitPosition():
     oracle_mid_price = 0.0
     ask_pricing = 0.0
     target_token = ''
+    # 
+    sell_in_progress = False
+    buy_in_progress = False
     # Trade Metrics
     orders_attempted_count = 0
     orders_completed_count = 0
@@ -302,13 +305,13 @@ class OracleSniperLimitPosition():
     def output_status(self):
         ln1 = ["Tick:", 'ask_pricing', 'trigger_*_price', 'oracle mid price', 'buy/sell', 'conf %', 'calc %']
         ln1 = " ".join(ln1)
-        print(ln1)
+        self.logger().info(ln1)
         ln2 = ["Buy Criteria:", str(self.ask_pricing), str(self.trigger_buy_price), str(self.oracle_mid_price), str(self.ask_pricing < self.trigger_buy_price), str(self.lower_limit_percentage_of_oracle_ma), str(self.terra_ask_percent_of_oracle_mid)]
         ln2 = " ".join(ln2)
-        print(ln2)
+        self.logger().info(ln2)
         ln3 = ["Sell Criteria:", str(self.ask_pricing), str(self.trigger_sell_price), str(self.oracle_mid_price), str(self.ask_pricing > self.trigger_sell_price), str(self.upper_limit_percentage_of_oracle_ma), str(self.terra_ask_percent_of_oracle_mid)]
         ln3 = " ".join(ln3)
-        print(ln3)
+        self.logger().info(ln3)
         return ln1, ln2, ln3
 
     def output_should_buy_warning(self):
@@ -323,18 +326,24 @@ class OracleSniperLimitPosition():
         joinedstr = " - ".join(["Terraswap Price:", str(self.ask_pricing), str(self.oracle_mid_price), str(self.oracle_sell_price), str(self.oracle_buy_price), str(self.upper_limit_percentage_of_oracle_ma),str(self.terra_ask_percent_of_oracle_mid)])
         self.logger().info(joinedstr)
         
-    async def handle_offsets(self):
-        self.trigger_buy_price = PerformanceMetrics.smart_round(Decimal(1-self.lower_limit_percentage_of_oracle_ma)*self.oracle_mid_price, 8)
-        self.trigger_sell_price = PerformanceMetrics.smart_round(Decimal(1+self.upper_limit_percentage_of_oracle_ma)*self.oracle_mid_price, 8)
-        self.output_status()        
-        self.logger().info("Evaluating Buy..")
+    async def handle_buy(self):
+        if self.buy_in_progress == True:
+            self.logger().warn("Buy in Progress..")
+            return
         if self.ask_pricing < self.trigger_buy_price:
             self.output_should_buy_warning()
             # Check criteria
             # 1. Check current position self.current_position_amount==0
+            # print("current_position_amount")
+            # print(self.current_position_amount)
             if not self.current_position_amount==0:
-                self.logger().warn(u'\N{LATIN SMALL LETTER O WITH STROKE} Skipping Buy, Holding Position: '+self.current_position_amount)
-                return
+                self.logger().warn(u'\N{LATIN SMALL LETTER O WITH STROKE} Current Position > 0: '+str(self.current_position_amount))
+                if self.current_position_amount > 19000:
+                    self.logger().warn(u'\N{LATIN SMALL LETTER O WITH STROKE} Skipping Buy, Holding Position: '+str(self.current_position_amount))
+                    return
+                else: 
+                    self.logger().warn(u'\N{LATIN SMALL LETTER O WITH STROKE} Near Zero Balance, Proceeding with Buy: '+str(self.current_position_amount))
+
             self.logger().info(u'\N{check mark} Current Position is '+str(self.current_position_amount))
             # 2. # trades below Max Num Trades Threshold
             print(str(self.trade_eval_num_trades_below_threshold()))
@@ -345,7 +354,8 @@ class OracleSniperLimitPosition():
             self.logger().info(u'\N{check mark} Trade Count Below Threshold')
             self.logger().warn(str(self.orders_attempted_count) +" / "+ str(self.orders_completed_count) +" / "+ str(self.max_num_trade_attempts))
             # 3. Check Wallet UST Balance Above Threshold
-            if not self.trade_eval_ust_balance_above_threshold():
+            if not self.trade_eval_ust_balance_above_threshold(c_map.get('MINIMUM_WALLET_UST_BALANCE').value):
+                self.logger().info(u'\N{LATIN SMALL LETTER O WITH STROKE} UST Balance Below Threshold')
                 return 
             self.logger().info(u'\N{check mark} UST Balance Above Threshold')
             # 4. Execute Buy Contract
@@ -360,36 +370,52 @@ class OracleSniperLimitPosition():
                 self.logger().info(self.balance)
                 return
             else:
+                self.buy_in_progress = True
                 result = self.terra_service.token_swap(pool, amount, sellinfo, belief_price, max_spread)
                 self.logger().info("outputting transaction log..")
                 self.logger().info(result.txhash)
                 self.logger().warn(result.raw_log)
                 self.logger().info("transaction complete..")
-                self.orders_completed_count = self.orders_completed_count+1
                 self.balance  = await self.terra_service.request_updated_wallet_balance()
                 self.logger().info(self.balance)
+                self.orders_completed_count = self.orders_completed_count+1
+                self.buy_in_progress = False
 
-        self.logger().info("Evaluating Sell..")
+    async def handle_sell(self):
+        if self.sell_in_progress == True:
+            self.logger().warn("Sell in Progress..")
+            return
         if self.ask_pricing > self.trigger_sell_price:
             self.output_should_sell_warning()
             # Check criteria
             # 1. Check current position self.current_position_amount==0 
             if self.current_position_amount==0:
                 self.logger().warn("No position to sell: "+str(self.current_position_amount))
-                return            
+                return
+            elif self.current_position_amount<50000:
+                self.logger().warn("Position too small to sell: "+str(self.current_position_amount))
+                return
+            self.logger().info(u'\N{check mark} Current position amount above 0: '+str(self.current_position_amount))
             # 2. # trades below Max Num Trades Threshold
             if not self.trade_eval_num_trades_below_threshold():
-                return 
+                self.logger().info(u'\N{LATIN SMALL LETTER O WITH STROKE} Trade Count Above Threshold')
+                self.logger().warn(str(self.orders_attempted_count) +" / "+ str(self.orders_completed_count) +" / "+ str(self.max_num_trade_attempts))
+                return
             self.logger().info(u'\N{check mark} Trade Count Below Threshold')
             self.logger().warn(str(self.orders_attempted_count) +" / "+ str(self.orders_completed_count) +" / "+ str(self.max_num_trade_attempts))
             # 3. Check Wallet UST Balance Above Threshold
-            if not self.trade_eval_ust_balance_above_threshold():
-                return 
+            if not self.trade_eval_ust_balance_above_threshold(c_map.get('MINIMUM_WALLET_UST_BALANCE_FOR_SELL').value):
+                self.logger().info(u'\N{LATIN SMALL LETTER O WITH STROKE} UST Balance Below Threshold')
+                return
             self.logger().info(u'\N{check mark} UST Balance Above Threshold')
             self.logger().info(u'\N{LATIN SMALL LETTER O WITH STROKE} Current Position is '+str(self.current_position_amount))
             # 4. Prepare Sell Contract
             pool, amount, sellinfo, belief_price, max_spread = await self.trade_generate_sell_contract_values()
+            gp = int(Decimal(self.terra_service.gas_prices.get(sellinfo['native_token']['denom']))*10**6)
+            amount = amount - int(Decimal(self.terra_service.gas_prices.get(sellinfo['native_token']['denom']))*10**6) - 1929 # Calculation (amount) - (gas price) - (fees)
             self.logger().info('Contract vars')
+            self.logger().info('dynamic gas: '+str(gp))
+            
             contract_vars = " ".join([str(pool), str(amount), str(json.dumps(sellinfo)), str(belief_price), str(max_spread)])
             self.logger().info(contract_vars)
             # 4. Execute Sell Contract
@@ -399,49 +425,51 @@ class OracleSniperLimitPosition():
                 self.logger().info(self.balance)
                 return
             else:
+                self.sell_in_progress = True
                 result = self.terra_service.token_swap(pool, amount, sellinfo, belief_price, max_spread)
                 self.logger().info("outputting transaction log..")
                 self.logger().info(result.txhash)
                 self.logger().warn(result.raw_log)
                 self.logger().info("transaction complete..")                
                 self.balance  = await self.terra_service.request_updated_wallet_balance()
-
                 self.logger().info(self.balance)
                 self.orders_completed_count = self.orders_completed_count+1
+                self.sell_in_progress = False
+
+    async def handle_offsets(self):
+        self.trigger_buy_price = PerformanceMetrics.smart_round(Decimal(1-self.lower_limit_percentage_of_oracle_ma)*self.oracle_mid_price, 8)
+        self.trigger_sell_price = PerformanceMetrics.smart_round(Decimal(1+self.upper_limit_percentage_of_oracle_ma)*self.oracle_mid_price, 8)
+        self.output_status()
+        self.logger().info("Evaluating Buy..")
+        await self.handle_buy()
+
+        self.logger().info("Evaluating Sell..")
+        await self.handle_sell()
 
     async def trade_generate_sell_contract_values(self):
         # Generate Values
-        assets = await asyncio.ensure_future(self.terra_service.contract_query(self.pool))
-        bal = self.terra_service.get_balance_from_wallet(self.balance, self.terra_service.coin_to_denom(c_map.get("OFFER_ASSET").value))
-        amount = int(float(c_map.get("DEFAULT_BASE_TX_SIZE_PERCENTAGE_OF_BAL").value)*bal.amount)
+        assets = await asyncio.ensure_future(self.terra_service.contract_query(self.pool))        
         self.pricing = self.terra_service.get_pair_pricing(self.pool)
         # SELL
         info = []
         beliefPriceStr = ''
-        self.logger().info(assets)
+        # self.logger().info(assets)
+        # self.logger().info(self.pricing)
         m = c_map.get("TARGET_PAIR").value
         if m == 'Luna-UST': 
             info = assets["assets"][1]['info']
-            if 'token0' in self.pricing:
-                beliefPriceStr = self.pricing['token0']['price']
-        elif m == 'UST-bLuna': 
-            info = assets["assets"][0]['info']
-            if 'token1' in self.pricing:
-                beliefPriceStr = self.pricing['token1']['price']
-        elif m == 'UST-bETH': 
-            info = assets["assets"][0]['info']
             if 'token1' in self.pricing:
                 beliefPriceStr = self.pricing['token1']['price']
         else:
             info = assets["assets"][0]['info']
-            if 'token1' in self.pricing:
-                beliefPriceStr = self.pricing['token1']['price']
-            print("You are running with an Untested token pair, proceed with caution.")    
+            if 'token0' in self.pricing:
+                beliefPriceStr = self.pricing['token0']['price']
+            print("You are running with an Untested token pair, proceed with caution.")
         belief_price = beliefPriceStr
         print("belief_price")
         print(belief_price)
         max_spread = c_map.get("DEFAULT_MAX_SPREAD").value
-        return self.pool, amount, info, belief_price, max_spread
+        return self.pool, self.current_position_amount, info, belief_price, max_spread
 
     async def trade_generate_buy_contract_values(self):
         # Generate Values
@@ -477,12 +505,11 @@ class OracleSniperLimitPosition():
         return self.pool, amount, info, belief_price, max_spread
 
 
-    def trade_eval_ust_balance_above_threshold(self):
-        condition1 = self.terra_service.balance_above_min_threshold(self.balance, self.terra_service.coin_to_denom(c_map.get("BASE_TX_CURRENCY").value), c_map.get("MINIMUM_WALLET_UST_BALANCE").value)
+    def trade_eval_ust_balance_above_threshold(self, MINIMUM_WALLET_UST_BALANCE):
+        condition1 = self.terra_service.balance_above_min_threshold(self.balance, self.terra_service.coin_to_denom(c_map.get("BASE_TX_CURRENCY").value), MINIMUM_WALLET_UST_BALANCE)
         return condition1
 
     def trade_eval_num_trades_below_threshold(self):
-
         return int(self.max_num_trade_attempts) > self.orders_completed_count and int(self.max_num_trade_attempts) > self.orders_attempted_count
 
     def calculate_moving_averages(self):
@@ -509,8 +536,8 @@ class OracleSniperLimitPosition():
             win_avg = PerformanceMetrics.smart_round(Decimal(sum(this_window) / self.MA_window_size),8)
             self.ask_price_series_ma.append(win_avg)
             # print('ask_price_series_ma:', self.ask_price_series_ma[len(self.ask_price_series_ma)-1])
-        
-        print('ma',len(self.ask_price_series_ma), len(self.ask_price_series))
+        jstr = " ".join(['Moving Averages', str(len(self.ask_price_series_ma)), str(len(self.ask_price_series))])
+        self.logger().info(jstr)
         
     def update_buy_params(self, pool, pricing, wallet_ask_asset_balance):
         self.pool = pool 
@@ -518,8 +545,8 @@ class OracleSniperLimitPosition():
         self.current_position_amount = wallet_ask_asset_balance
         
     def eval_pricing(self, terra_ask_pricing, oracle_buy_price, oracle_sell_price, oracle_mid_price, balance):
-        print('eval:','terra_ask_pricing', 'oracle_buy_price', 'oracle_sell_price')
-        print(terra_ask_pricing, oracle_buy_price, oracle_sell_price, oracle_mid_price)
+        # print('eval:','terra_ask_pricing', 'oracle_buy_price', 'oracle_sell_price')
+        # print(terra_ask_pricing, oracle_buy_price, oracle_sell_price, oracle_mid_price)
         self.oracle_sell_price = oracle_sell_price
         self.oracle_buy_price = oracle_buy_price
         self.oracle_mid_price = oracle_mid_price

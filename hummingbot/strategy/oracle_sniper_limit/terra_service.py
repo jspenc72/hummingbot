@@ -129,6 +129,25 @@ class TerraService():
                 token = pricing["token1"]                                              
         return token
 
+
+    def get_currency_amount_from_wallet_balance(self, balance, currency):
+        print("get_currency_amount_from_wallet_balance", balance, currency)
+        amount = 0
+        if balance.get(currency) is not None:
+            amount = balance[currency].amount
+        else:
+            amount = 0
+        return amount
+
+    def get_base_tx_size_from_balance(self, balance, currency, DEFAULT_BASE_TX_SIZE):
+        print("get_base_tx_size_from_balance", balance, currency, DEFAULT_BASE_TX_SIZE)
+        if balance.get(currency) is not None:
+            amount = balance[currency].amount
+            size = amount*float(DEFAULT_BASE_TX_SIZE)
+        else:
+            size = 0
+        return int(size)
+
     def request_cw20_tokens(self):
         self.cw20_tokens = requests.get('https://api.terraswap.io/tokens').json()
         return self.cw20_tokens
@@ -203,8 +222,11 @@ class TerraService():
         wallet = terra.wallet(self.mk)
         seq = wallet.sequence()
         account_number = wallet.account_number()
-        print("account_number")
-        print(account_number)
+
+        gp = self.gas_prices.get(sellinfo['native_token']['denom'])+sellinfo['native_token']['denom']
+        
+        # print("account_number")
+        # print(account_number)
         swp = {
                 "swap": {
                     "max_spread": max_spread,
@@ -214,7 +236,7 @@ class TerraService():
                     },
                     "belief_price": belief_price
                 }
-            }      
+            }
         print(swp)  
         swap = MsgExecuteContract(
             sender=wallet.key.acc_address,
@@ -223,7 +245,6 @@ class TerraService():
             coins=Coins.from_str(str(amount)+''+sellinfo['native_token']['denom']),
         )
         print(swap)        
-        gp = self.gas_prices.get(sellinfo['native_token']['denom'])+sellinfo['native_token']['denom']
         print('dynamic gas: ',gp)
         tx = wallet.create_and_sign_tx(
                             msgs=[swap], 
@@ -233,5 +254,3 @@ class TerraService():
                         )
         print(tx)
         return terra.tx.broadcast(tx)
-
-
